@@ -30,7 +30,7 @@
 
 **Apply mode**: A command mode enabled by `--apply` that mutates YNAB and records applied operations.
 
-**Audit log**: Append-only local records of claimed and applied budget operations. JSONL audit records let scheduled CLI runs avoid applying the same budget/rule/month twice and surface claim-only runs for manual recovery.
+**Audit log**: Append-only local records of claimed and applied budget operations. JSONL audit records let scheduled CLI runs avoid applying the same budget/rule/month twice and let read-only audit commands surface claim-only runs for manual recovery.
 
 ## Relationships
 

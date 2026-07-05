@@ -62,6 +62,41 @@ export type OperationAuditKey = {
   readonly month: BudgetMonth;
 };
 
+export type PersistedOperationAuditState = Exclude<OperationAuditState, "none">;
+
+export type OperationAuditEntry = {
+  readonly key: OperationAuditKey;
+  readonly state: PersistedOperationAuditState;
+  readonly ruleType?: PlannedBudgetOperation["ruleType"];
+  readonly claimedAt?: string;
+  readonly appliedAt?: string;
+  readonly operation?: PlannedBudgetOperation;
+  readonly legacyTopUp?: {
+    readonly categoryId: string;
+    readonly assignmentAmount: Milliunits;
+    readonly budgetedAfter: Milliunits;
+  };
+};
+
+export type OperationAuditEntryFilter = {
+  readonly ruleId?: string;
+  readonly budgetId?: string;
+  readonly month?: BudgetMonth;
+  readonly state?: PersistedOperationAuditState;
+};
+
+export type OperationAuditScan = {
+  readonly entries: readonly OperationAuditEntry[];
+  readonly ignoredLineCount: number;
+};
+
+export class AuditLogFileNotFoundError extends Error {
+  public constructor(path: string) {
+    super(`Audit log file not found: ${path}`);
+    this.name = "AuditLogFileNotFoundError";
+  }
+}
+
 export interface BudgetOperationAuditLog {
   getOperationState(key: OperationAuditKey): Promise<OperationAuditState>;
   append(record: BudgetOperationAuditRecord): Promise<void>;
@@ -111,25 +146,72 @@ export class JsonlBudgetOperationAuditLog implements TopUpAuditLog {
     return records.some((record) => record.ruleId === ruleId && record.month === month);
   }
 
+  public async scanOperationAuditEntries(filter: OperationAuditEntryFilter = {}): Promise<OperationAuditScan> {
+    const parsed = await this.readParsedRecords({ missingFile: "error" });
+    const grouped = new Map<string, MutableOperationAuditEntry>();
+
+    for (const record of parsed.records) {
+      const key = { ruleId: record.ruleId, budgetId: record.budgetId, month: record.month };
+      const groupKey = operationGroupKey(key);
+      const entry = grouped.get(groupKey) ?? { key, state: "claimed" };
+
+      applyRecordToEntry(entry, record);
+      grouped.set(groupKey, entry);
+    }
+
+    const entries = [...grouped.values()].filter((entry) => matchesEntryFilter(entry, filter));
+
+    return {
+      entries,
+      ignoredLineCount: parsed.ignoredLineCount,
+    };
+  }
+
   public async append(record: BudgetOperationAuditRecord): Promise<void> {
     await mkdir(dirname(this.path), { recursive: true });
     await appendFile(this.path, `${JSON.stringify(record)}\n`, "utf8");
   }
 
   private async readRecords(): Promise<BudgetOperationAuditRecord[]> {
-    const raw = await this.readRaw();
-
-    return raw
-      .split("\n")
-      .filter((line) => line.trim().length > 0)
-      .flatMap((line) => parseRecordLine(line));
+    return (await this.readParsedRecords()).records;
   }
 
-  private async readRaw(): Promise<string> {
+  private async readParsedRecords(
+    options: { readonly missingFile: "empty" | "error" } = { missingFile: "empty" },
+  ): Promise<{
+    readonly records: BudgetOperationAuditRecord[];
+    readonly ignoredLineCount: number;
+  }> {
+    const raw = await this.readRaw(options);
+    const records: BudgetOperationAuditRecord[] = [];
+    let ignoredLineCount = 0;
+
+    for (const line of raw.split("\n")) {
+      if (line.trim().length === 0) {
+        continue;
+      }
+
+      const parsedLine = parseRecordLine(line);
+      if (parsedLine.length === 0) {
+        ignoredLineCount += 1;
+        continue;
+      }
+
+      records.push(...parsedLine);
+    }
+
+    return { records, ignoredLineCount };
+  }
+
+  private async readRaw(options: { readonly missingFile: "empty" | "error" }): Promise<string> {
     try {
       return await readFile(this.path, "utf8");
     } catch (error) {
       if (isNodeError(error) && error.code === "ENOENT") {
+        if (options.missingFile === "error") {
+          throw new AuditLogFileNotFoundError(this.path);
+        }
+
         return "";
       }
 
@@ -137,6 +219,67 @@ export class JsonlBudgetOperationAuditLog implements TopUpAuditLog {
       throw error;
     }
   }
+}
+
+type MutableOperationAuditEntry = {
+  key: OperationAuditKey;
+  state: PersistedOperationAuditState;
+  ruleType?: PlannedBudgetOperation["ruleType"];
+  claimedAt?: string;
+  appliedAt?: string;
+  operation?: PlannedBudgetOperation;
+  legacyTopUp?: {
+    readonly categoryId: string;
+    readonly assignmentAmount: Milliunits;
+    readonly budgetedAfter: Milliunits;
+  };
+};
+
+function applyRecordToEntry(entry: MutableOperationAuditEntry, record: BudgetOperationAuditRecord): void {
+  switch (record.kind) {
+    case "budget-operation-claimed":
+      entry.ruleType = record.ruleType;
+      entry.claimedAt = record.claimedAt;
+      entry.operation = record.operation;
+      break;
+    case "budget-operation-applied":
+      entry.state = "applied";
+      entry.ruleType = record.ruleType;
+      entry.appliedAt = record.appliedAt;
+      break;
+    case "monthly-category-top-up-claimed":
+      entry.ruleType = "monthly-category-top-up";
+      entry.claimedAt = record.claimedAt;
+      entry.legacyTopUp = legacyTopUpDetails(record);
+      break;
+    case "monthly-category-top-up-applied":
+      entry.state = "applied";
+      entry.ruleType = "monthly-category-top-up";
+      entry.appliedAt = record.appliedAt;
+      entry.legacyTopUp = legacyTopUpDetails(record);
+      break;
+  }
+}
+
+function legacyTopUpDetails(record: TopUpAuditRecord) {
+  return {
+    categoryId: record.categoryId,
+    assignmentAmount: record.assignmentAmount,
+    budgetedAfter: record.budgetedAfter,
+  };
+}
+
+function matchesEntryFilter(entry: OperationAuditEntry, filter: OperationAuditEntryFilter): boolean {
+  return (
+    (filter.ruleId === undefined || entry.key.ruleId === filter.ruleId) &&
+    (filter.budgetId === undefined || entry.key.budgetId === filter.budgetId) &&
+    (filter.month === undefined || entry.key.month === filter.month) &&
+    (filter.state === undefined || entry.state === filter.state)
+  );
+}
+
+function operationGroupKey(key: OperationAuditKey): string {
+  return `${key.budgetId}\u0000${key.ruleId}\u0000${key.month}`;
 }
 
 export const JsonlTopUpAuditLog = JsonlBudgetOperationAuditLog;
