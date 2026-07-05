@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import { mkdtemp, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { loadRulesConfig, parseRulesConfig } from "../../src/config/rules.js";
 
 describe("rules config parsing", () => {
-  it("parses external JSON into domain rules at the boundary", () => {
+  it("parses external JSON into top-up domain rules at the boundary", () => {
     const config = parseRulesConfig({
       rules: [
         {
@@ -19,8 +19,42 @@ describe("rules config parsing", () => {
       ],
     });
 
-    expect(config.rules[0]?.monthlyAmount).toBe(250_000);
-    expect(config.rules[0]?.targetBalance).toBe(1_000_000);
+    const rule = config.rules[0];
+    expect(rule?.type).toBe("monthly-category-top-up");
+    if (rule?.type !== "monthly-category-top-up") {
+      throw new Error("expected top-up rule");
+    }
+
+    expect(rule.enabled).toBe(true);
+    expect(rule.monthlyAmount).toBe(250_000);
+    expect(rule.targetBalance).toBe(1_000_000);
+  });
+
+  it("parses transfer rules and amount policies into domain milliunits", () => {
+    const config = parseRulesConfig({
+      rules: [
+        {
+          id: "sweep-dining-extra",
+          type: "category-available-transfer",
+          enabled: false,
+          budgetId: "budget-1",
+          fromCategoryId: "dining",
+          toCategoryId: "vacation",
+          amount: { type: "percent-of-available", percent: 50, max: "100.00" },
+          leaveAvailable: "25.00",
+        },
+      ],
+    });
+
+    const rule = config.rules[0];
+    expect(rule?.type).toBe("category-available-transfer");
+    if (rule?.type !== "category-available-transfer") {
+      throw new Error("expected transfer rule");
+    }
+
+    expect(rule.enabled).toBe(false);
+    expect(rule.amount).toEqual({ type: "percent-of-available", percent: 50, max: 100_000 });
+    expect(rule.leaveAvailable).toBe(25_000);
   });
 
   it("rejects invalid rule payloads instead of letting loose types enter the app", () => {
@@ -34,6 +68,47 @@ describe("rules config parsing", () => {
             categoryId: "category-1",
             monthlyAmount: "0",
             targetBalance: "-1",
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects duplicate rule ids and transfer rules with identical source/destination categories", () => {
+    expect(() =>
+      parseRulesConfig({
+        rules: [
+          {
+            id: "rule-1",
+            type: "monthly-category-top-up",
+            budgetId: "budget-1",
+            categoryId: "category-1",
+            monthlyAmount: "1.00",
+            targetBalance: "1.00",
+          },
+          {
+            id: "rule-1",
+            type: "monthly-category-top-up",
+            budgetId: "budget-1",
+            categoryId: "category-2",
+            monthlyAmount: "1.00",
+            targetBalance: "1.00",
+          },
+        ],
+      }),
+    ).toThrow(/Duplicate rule id/);
+
+    expect(() =>
+      parseRulesConfig({
+        rules: [
+          {
+            id: "bad-transfer",
+            type: "category-available-transfer",
+            budgetId: "budget-1",
+            fromCategoryId: "category-1",
+            toCategoryId: "category-1",
+            amount: { type: "fixed", amount: "1.00" },
+            leaveAvailable: "0.00",
           },
         ],
       }),

@@ -2,17 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { runTopUpsCommand } from "../../src/commands/runTopUpsCommand.js";
 import { parseBudgetMonth } from "../../src/domain/month.js";
 import { milliunits } from "../../src/domain/money.js";
-import type { TopUpAuditLog, TopUpAuditRecord } from "../../src/audit/auditLog.js";
+import type {
+  BudgetOperationAuditRecord,
+  OperationAuditKey,
+  OperationAuditState,
+  TopUpAuditLog,
+} from "../../src/audit/auditLog.js";
 import type { BudgetClient } from "../../src/ynab/budgetClient.js";
 
 class MemoryAuditLog implements TopUpAuditLog {
-  public readonly records: TopUpAuditRecord[] = [];
+  public readonly records: BudgetOperationAuditRecord[] = [];
+
+  public async getOperationState(_key: OperationAuditKey): Promise<OperationAuditState> {
+    return "none";
+  }
 
   public async hasClaimedOrApplied(): Promise<boolean> {
     return false;
   }
 
-  public async append(record: TopUpAuditRecord): Promise<void> {
+  public async append(record: BudgetOperationAuditRecord): Promise<void> {
     this.records.push(record);
   }
 
@@ -109,6 +118,7 @@ function configFixture() {
       {
         id: "rule-1",
         type: "monthly-category-top-up" as const,
+        enabled: true,
         budgetId: "budget-1",
         categoryId: "category-1",
         monthlyAmount: milliunits(50_000),
