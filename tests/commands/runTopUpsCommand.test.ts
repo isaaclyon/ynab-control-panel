@@ -297,6 +297,98 @@ describe("run top-ups command", () => {
     expect(write).toHaveBeenCalledWith(expect.stringContaining("skipped disabled rules: 1"));
   });
 
+  it("runs only rules for the requested budget when --budget is provided", async () => {
+    const write = vi.fn();
+    const budgetClient: BudgetClient & YnabCatalogClient = {
+      getCategoryMonth: vi.fn().mockResolvedValue({
+        budgeted: milliunits(10_000),
+        activity: milliunits(0),
+        balance: milliunits(20_000),
+      }),
+      updateCategoryBudgeted: vi.fn(),
+      listBudgets: vi.fn(),
+      listCategories: vi.fn().mockResolvedValue([]),
+    };
+
+    await runTopUpsCommand({
+      env: {
+        ynabAccessToken: "token",
+        rulesFile: "default-rules.json",
+        auditLogFile: "audit.jsonl",
+      },
+      options: { apply: false, budget: "budget-2" },
+      stdout: { write },
+      dependencies: {
+        loadRulesConfig: vi.fn().mockResolvedValue(twoBudgetConfigFixture()),
+        createBudgetClient: () => budgetClient,
+        createAuditLog: () => new MemoryAuditLog(),
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
+    });
+
+    expect(budgetClient.listCategories).toHaveBeenCalledTimes(1);
+    expect(budgetClient.listCategories).toHaveBeenCalledWith({ budgetId: "budget-2" });
+    expect(budgetClient.getCategoryMonth).toHaveBeenCalledTimes(1);
+    expect(budgetClient.getCategoryMonth).toHaveBeenCalledWith({
+      budgetId: "budget-2",
+      month: "2026-08",
+      categoryId: "category-2",
+    });
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("dry-run: budget-2-rule"));
+    expect(write).toHaveBeenCalledWith(expect.not.stringContaining("rule-1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("Summary:\n  rules considered: 1"));
+  });
+
+  it("does not read YNAB when --budget matches no configured rules", async () => {
+    const write = vi.fn();
+    const budgetClient: BudgetClient & YnabCatalogClient = {
+      getCategoryMonth: vi.fn(),
+      updateCategoryBudgeted: vi.fn(),
+      listBudgets: vi.fn(),
+      listCategories: vi.fn(),
+    };
+
+    await runTopUpsCommand({
+      env: {
+        ynabAccessToken: "token",
+        rulesFile: "default-rules.json",
+        auditLogFile: "audit.jsonl",
+      },
+      options: { apply: false, budget: "missing-budget" },
+      stdout: { write },
+      dependencies: {
+        loadRulesConfig: vi.fn().mockResolvedValue(twoBudgetConfigFixture()),
+        createBudgetClient: () => budgetClient,
+        createAuditLog: () => new MemoryAuditLog(),
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
+    });
+
+    expect(budgetClient.listCategories).not.toHaveBeenCalled();
+    expect(budgetClient.getCategoryMonth).not.toHaveBeenCalled();
+    expect(budgetClient.updateCategoryBudgeted).not.toHaveBeenCalled();
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("Summary:\n  rules considered: 0"));
+  });
+
+  it("requires --only to match the requested --budget when both filters are provided", async () => {
+    await expect(
+      runTopUpsCommand({
+        env: {
+          ynabAccessToken: "token",
+          rulesFile: "default-rules.json",
+          auditLogFile: "audit.jsonl",
+        },
+        options: { apply: false, only: "rule-1", budget: "budget-2" },
+        dependencies: {
+          loadRulesConfig: vi.fn().mockResolvedValue(twoBudgetConfigFixture()),
+          createBudgetClient: vi.fn<() => BudgetClient>(),
+          createAuditLog: vi.fn<() => MemoryAuditLog>(),
+          currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+        },
+      }),
+    ).rejects.toThrow("Rule not found for budget budget-2: rule-1");
+  });
+
   it("fails before creating YNAB dependencies when --only does not match a rule", async () => {
     const createBudgetClient = vi.fn<() => BudgetClient>();
     const createAuditLog = vi.fn<() => MemoryAuditLog>();
@@ -367,6 +459,23 @@ function disabledOnlyConfigFixture() {
         categoryId: "category-1",
         monthlyAmount: milliunits(50_000),
         targetBalance: milliunits(200_000),
+      },
+    ],
+  };
+}
+
+function twoBudgetConfigFixture() {
+  return {
+    rules: [
+      ...configFixture().rules,
+      {
+        id: "budget-2-rule",
+        type: "monthly-category-top-up" as const,
+        enabled: true,
+        budgetId: "budget-2",
+        categoryId: "category-2",
+        monthlyAmount: milliunits(30_000),
+        targetBalance: milliunits(100_000),
       },
     ],
   };

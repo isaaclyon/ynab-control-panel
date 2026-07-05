@@ -101,11 +101,21 @@ run
   .option("--month <yyyy-mm>", "budget month to operate on; defaults to the current UTC month")
   .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
   .option("--only <ruleId>", "run only one configured rule by ID")
+  .option("--budget <budgetId>", "run only configured rules for one YNAB budget ID")
   .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
   .option("--json", "print structured JSON instead of text", false)
-  .action(async (options: { month?: string; rules?: string; only?: string; apply: boolean; json?: boolean }) => {
-    await runRulesCommand({ env: parseEnv(process.env), options });
-  });
+  .action(
+    async (options: {
+      month?: string;
+      rules?: string;
+      only?: string;
+      budget?: string;
+      apply: boolean;
+      json?: boolean;
+    }) => {
+      await runRulesCommand({ env: parseEnv(process.env), options });
+    },
+  );
 
 run
   .command("top-up")
@@ -113,11 +123,21 @@ run
   .option("--month <yyyy-mm>", "budget month to operate on; defaults to the current UTC month")
   .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
   .option("--only <ruleId>", "run only one configured rule by ID")
+  .option("--budget <budgetId>", "run only configured rules for one YNAB budget ID")
   .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
   .option("--json", "print structured JSON instead of text", false)
-  .action(async (options: { month?: string; rules?: string; only?: string; apply: boolean; json?: boolean }) => {
-    await runRulesCommand({ env: parseEnv(process.env), options });
-  });
+  .action(
+    async (options: {
+      month?: string;
+      rules?: string;
+      only?: string;
+      budget?: string;
+      apply: boolean;
+      json?: boolean;
+    }) => {
+      await runRulesCommand({ env: parseEnv(process.env), options });
+    },
+  );
 
 run
   .command("scheduled")
@@ -125,11 +145,21 @@ run
   .option("--month <yyyy-mm>", "budget month to operate on; defaults to the current UTC month")
   .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
   .option("--only <ruleId>", "run only one configured rule by ID")
+  .option("--budget <budgetId>", "run only configured rules for one YNAB budget ID")
   .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
   .option("--json", "print structured JSON instead of text", false)
-  .action(async (options: { month?: string; rules?: string; only?: string; apply: boolean; json?: boolean }) => {
-    await runRulesCommand({ env: parseEnv(process.env), options });
-  });
+  .action(
+    async (options: {
+      month?: string;
+      rules?: string;
+      only?: string;
+      budget?: string;
+      apply: boolean;
+      json?: boolean;
+    }) => {
+      await runRulesCommand({ env: parseEnv(process.env), options });
+    },
+  );
 
 try {
   await program.parseAsync();

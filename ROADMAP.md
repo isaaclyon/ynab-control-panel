@@ -16,21 +16,19 @@
 - Rules inspection CLI for local rules validation, listing, and explanation without YNAB calls.
 - Structured JSON output for run and audit commands.
 - Single-rule execution filter for dry-run-first testing and debugging.
+- Budget execution filter for running one YNAB budget's configured rules.
 - Docker-compatible runtime for mini PC scheduling.
 
 ## Next
 
 Candidate vertical slices, roughly in priority order:
 
-1. **Budget execution filter**: add `run rules --budget <budgetId>` for running only rules that target one YNAB budget.
-2. **Config examples generator**: generate starter JSON rule snippets from budget/category IDs to reduce config-editing mistakes.
-3. **Safe YNAB sandbox/dev-budget integration tests**: add opt-in tests against a real safe budget for listing, reading, and category budget updates.
-4. **Audit recovery resolution notes**: append local records that mark claim-only operations as manually reviewed/resolved without pretending they were applied.
-5. **Apply confirmation / plan file**: save a dry-run plan and apply that exact plan in a later command for stronger mutation review.
-6. **Month rollover helper**: show current, previous, and next budget months and what month scheduled runs would target.
-7. **End-of-month carryover workflow**: add a new rule type for moving remaining available money from selected categories into a holding category.
-8. **Audit log compaction/export**: produce a compact local history/report without changing idempotency semantics.
-9. **Stronger audit persistence**: add SQLite or another indexed store only if JSONL audit history becomes insufficient.
+1. **Config examples generator**: generate starter JSON rule snippets from budget/category IDs to reduce config-editing mistakes.
+2. **Audit recovery resolution notes**: append local records that mark claim-only operations as manually reviewed/resolved without pretending they were applied.
+3. **Apply confirmation / plan file**: save a dry-run plan and apply that exact plan in a later command for stronger mutation review.
+4. **Month rollover helper**: show current, previous, and next budget months and what month scheduled runs would target.
+5. **End-of-month carryover workflow**: add a new rule type for moving remaining available money from selected categories into a holding category.
+6. **Audit log compaction/export**: produce a compact local history/report without changing idempotency semantics.
 
 ## Later
 

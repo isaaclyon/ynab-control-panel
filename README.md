@@ -12,6 +12,7 @@ Backend-first TypeScript utilities for safe YNAB automation. The CLI runs typed 
 - Plan category available transfers that move available money between categories by updating category `budgeted` amounts.
 - Preview one user-visible planned operation per rule, even when that operation contains multiple YNAB updates.
 - Filter run commands to one rule with `--only <ruleId>` for dry-run-first testing and debugging.
+- Filter run commands to one budget with `--budget <budgetId>`.
 - Print text output by default and structured JSON with `--json` for run and audit commands.
 - Apply changes only with `--apply`.
 - Write an operation audit log so scheduled jobs are idempotent per budget/rule/month and claim-only runs are visible for manual recovery.
@@ -70,6 +71,13 @@ Run a single configured rule, dry-run first:
 ```bash
 npm run dev -- run rules --month 2026-07 --only <ruleId>
 npm run dev -- run rules --month 2026-07 --only <ruleId> --apply
+```
+
+Run only rules for one YNAB budget:
+
+```bash
+npm run dev -- run rules --month 2026-07 --budget <budgetId>
+npm run dev -- run scheduled --month 2026-07 --budget <budgetId> --apply
 ```
 
 `run rules`, `run top-up`, and `run scheduled` preserve detailed per-rule output and then print a summary block with rules considered, planned/applied operations, skipped/already-applied operations, no-ops, pending recovery, disabled rules, and the total dollars moved or budgeted in the current run. Each result includes a reason line explaining planned movement, no-ops, or disabled-rule skips. Category names are shown beside category IDs when the YNAB catalog lookup can resolve them; rules and audit identity remain ID-based.

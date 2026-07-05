@@ -17,6 +17,7 @@ export type RunRulesOptions = {
   readonly rules?: string;
   readonly json?: boolean;
   readonly only?: string;
+  readonly budget?: string;
 };
 
 type RunRulesDependencies = {
@@ -42,7 +43,10 @@ export async function runRulesCommand(input: {
   const dependencies = { ...defaultDependencies, ...input.dependencies };
   const month = parseRequestedMonth(input.options.month, dependencies.currentBudgetMonth);
   const config = await dependencies.loadRulesConfig(input.options.rules ?? input.env.rulesFile);
-  const runConfig = filterRulesConfig(config, input.options.only);
+  const runConfig = filterRulesConfig(config, {
+    ...(input.options.only ? { only: input.options.only } : {}),
+    ...(input.options.budget ? { budget: input.options.budget } : {}),
+  });
   const budgetClient = dependencies.createBudgetClient(input.env.ynabAccessToken);
   const categoryNameLookup = await loadCategoryNameLookup({ config: runConfig, budgetClient });
   const auditLog = dependencies.createAuditLog(input.env.auditLogFile);
@@ -63,17 +67,28 @@ function parseRequestedMonth(month: string | undefined, getCurrentBudgetMonth: (
   return month ? parseBudgetMonth(month) : getCurrentBudgetMonth();
 }
 
-function filterRulesConfig(config: RulesConfig, only: string | undefined): RulesConfig {
-  if (!only) {
-    return config;
+function filterRulesConfig(
+  config: RulesConfig,
+  filters: { readonly only?: string; readonly budget?: string },
+): RulesConfig {
+  if (filters.only) {
+    const rule = config.rules.find((candidate) => candidate.id === filters.only);
+    if (!rule) {
+      throw new Error(`Rule not found: ${filters.only}`);
+    }
+
+    if (filters.budget && rule.budgetId !== filters.budget) {
+      throw new Error(`Rule not found for budget ${filters.budget}: ${filters.only}`);
+    }
+
+    return { rules: [rule] };
   }
 
-  const rule = config.rules.find((candidate) => candidate.id === only);
-  if (!rule) {
-    throw new Error(`Rule not found: ${only}`);
+  if (filters.budget) {
+    return { rules: config.rules.filter((rule) => rule.budgetId === filters.budget) };
   }
 
-  return { rules: [rule] };
+  return config;
 }
 
 async function loadCategoryNameLookup(input: {
