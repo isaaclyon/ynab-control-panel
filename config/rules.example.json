@@ -1,0 +1,12 @@
+{
+  "rules": [
+    {
+      "id": "emergency-fund-top-up",
+      "type": "monthly-category-top-up",
+      "budgetId": "replace-with-budget-id",
+      "categoryId": "replace-with-category-id",
+      "monthlyAmount": "250.00",
+      "targetBalance": "1000.00"
+    }
+  ]
+}

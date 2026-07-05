@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["run", "scheduled"]
