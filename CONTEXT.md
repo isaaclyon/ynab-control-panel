@@ -4,6 +4,10 @@
 
 **Budget month**: A YNAB month in `YYYY-MM` form. The CLI defaults to the current UTC month.
 
+**YNAB month parameter**: The date-shaped month value YNAB API endpoints expect, in `YYYY-MM-01` form. The app accepts `Budget month` values at the CLI/domain boundary and converts them to YNAB month parameters inside the YNAB adapter.
+
+**YNAB budget**: The top-level YNAB plan/budget whose ID is stored as `budgetId` in rules config. The YNAB SDK may call this a `planId`; this app uses `budgetId` in user-facing config and CLI output.
+
 **Category month snapshot**: The YNAB state for one category in one budget month: budgeted, activity, and balance, represented in YNAB milliunits.
 
 **Milliunits**: YNAB's integer money unit. `$1.00` is `1000` milliunits.

@@ -20,6 +20,7 @@ dry-run output or YNAB category budget updates
 
 - Responsibility: provide human- and scheduler-runnable commands.
 - Important boundary: dry-run is the default; mutation requires `--apply`.
+- Read-only `list` helpers may expose full local YNAB names and IDs for rules configuration, but never call mutating adapter operations.
 - What it must not own: budgeting math or YNAB response interpretation.
 
 ### Config parsing
@@ -44,6 +45,7 @@ dry-run output or YNAB category budget updates
 
 - Responsibility: translate domain operations to the YNAB TypeScript SDK.
 - Important boundary: SDK response shapes are converted to domain snapshots at the adapter edge.
+- Read-only catalog helpers translate YNAB budget/category listings into copyable IDs for local config.
 - What it must not own: rule math or scheduling policy.
 
 ### Audit log

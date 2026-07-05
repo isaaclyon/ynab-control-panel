@@ -5,6 +5,7 @@ Backend-first TypeScript utilities for safe YNAB automation. The first vertical 
 ## Current capability
 
 - Load rules from JSON.
+- List YNAB budget and category IDs for rules setup.
 - Fetch category month state from YNAB.
 - Calculate top-up assignments without mutating state by default.
 - Apply changes only with `--apply`.
@@ -21,6 +22,20 @@ cp config/rules.example.json config/rules.json
 Edit `.env` and `config/rules.json` with your YNAB access token, budget ID, and category IDs.
 
 ## CLI
+
+List YNAB budgets so you can copy a `budgetId` into `config/rules.json`:
+
+```bash
+npm run dev -- list budgets
+```
+
+List categories for a budget so you can copy a `categoryId` into `config/rules.json`:
+
+```bash
+npm run dev -- list categories --budget <budgetId>
+```
+
+The `list` commands are read-only. They intentionally print full local YNAB names and IDs without redaction because their purpose is copy/paste configuration on your own machine.
 
 Dry-run the monthly top-up job:
 
@@ -50,6 +65,16 @@ npm run build
 ```
 
 Coverage is expected to stay at or above 90% for statements, branches, functions, and lines.
+
+## Live smoke test
+
+With `.env` configured, run a read-only YNAB connectivity and dry-run smoke test:
+
+```bash
+npm run smoke:ynab
+```
+
+The smoke test creates a temporary top-up rule against the first visible category in the first YNAB plan, runs in dry-run mode, redacts IDs/amounts in output, and never calls `--apply`.
 
 ## Deployment sketch
 
