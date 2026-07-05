@@ -192,6 +192,18 @@ npm run smoke:ynab
 
 The smoke test creates a temporary top-up rule against the first visible category in the first YNAB plan, runs in dry-run mode, redacts IDs/amounts in output, and never calls `--apply`.
 
+For an isolated test budget only, run the gated local-dev live workflow smoke test. It creates or reuses an `Automation Test` category group with `Top Up Target`, `Transfer Source`, and `Transfer Destination` categories; resets their budgeted amounts for the selected month; dry-runs and applies a top-up rule; dry-runs and applies a transfer rule; verifies YNAB state after each dry-run/apply/no-op; proves same-month audit idempotency blocks duplicate applies; and resets those categories to `$0.00` on exit. Output redacts YNAB IDs and dollar amounts by default.
+
+```bash
+YNAB_LIVE_WORKFLOW_BUDGET_ID=<isolated-test-budget-id> \
+YNAB_ALLOW_LIVE_WORKFLOW_MUTATIONS=true \
+npm run smoke:ynab:workflow
+```
+
+Optionally set `YNAB_LIVE_WORKFLOW_MONTH=YYYY-MM`; otherwise it uses the current UTC budget month. Do not run this workflow against a real budget.
+
+Set `YNAB_LIVE_WORKFLOW_VERBOSE=true` only when you intentionally want full local debug output. This workflow is not included in the production Docker runtime image.
+
 ## Deployment sketch
 
 Build and run with Docker:
