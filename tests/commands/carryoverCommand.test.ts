@@ -81,6 +81,42 @@ describe("carryover command", () => {
       }),
     ).rejects.toThrow("At least one source category ID is required");
   });
+
+  it("rejects duplicate source category IDs", async () => {
+    await expect(
+      carryoverPlanCommand({
+        env: envFixture(),
+        options: { budget: "budget-1", month: "2026-06", sources: "source-1, source-1" },
+        dependencies: { createClient: () => clientFixture({}) },
+      }),
+    ).rejects.toThrow("Duplicate source category ID: source-1");
+  });
+
+  it("loads source snapshots that are absent from the category catalog", async () => {
+    const write = vi.fn();
+    const client = clientFixture({
+      [key("2026-06", "negative-1")]: { budgeted: 0, balance: -10_000 },
+      [key("2026-06", "source-1")]: { budgeted: 0, balance: 0 },
+      [key("2026-06", "source-2")]: { budgeted: 0, balance: 0 },
+      [key("2026-06", "source-extra")]: { budgeted: 20_000, balance: 20_000 },
+      [key("2026-07", "negative-1")]: { budgeted: 0, balance: 0 },
+      [key("2026-07", "source-extra")]: { budgeted: 0, balance: 0 },
+    });
+
+    await carryoverPlanCommand({
+      env: envFixture(),
+      options: { budget: "budget-1", month: "2026-06", sources: "source-extra" },
+      stdout: { write },
+      dependencies: { createClient: () => client },
+    });
+
+    expect(client.getCategoryMonth).toHaveBeenCalledWith({
+      budgetId: "budget-1",
+      month: "2026-06",
+      categoryId: "source-extra",
+    });
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("source-extra budgeted: $20.00 -> $10.00 (-$10.00)"));
+  });
 });
 
 type SnapshotFixture = {

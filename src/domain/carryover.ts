@@ -43,6 +43,16 @@ export type CarryoverPlan = {
   readonly totalUncoveredAmount: Milliunits;
 };
 
+type CarryoverAllocation = CarryoverPlanItem["allocations"][number];
+
+type SourceState = {
+  readonly categoryId: string;
+  readonly categoryName?: string | undefined;
+  remainingAvailable: Milliunits;
+  closingBudgetedCursor: Milliunits;
+  reversalBudgetedCursor: Milliunits;
+};
+
 export function planCarryover(input: {
   readonly budgetId: string;
   readonly closingMonth: BudgetMonth;
@@ -52,96 +62,25 @@ export function planCarryover(input: {
   readonly reversalSnapshots: readonly CarryoverCategorySnapshot[];
   readonly sourcePriority: readonly string[];
 }): CarryoverPlan {
-  const sourceStates = input.sourcePriority.map((categoryId) => {
-    const closingSnapshot = requireSnapshot(input.sources, categoryId, "closing source");
-    const reversalSnapshot = requireSnapshot(input.reversalSnapshots, categoryId, "reversal source");
-
-    return {
-      categoryId,
-      categoryName: closingSnapshot.categoryName ?? reversalSnapshot.categoryName,
-      remainingAvailable: milliunits(Math.max(closingSnapshot.balance, 0)),
-      closingBudgetedCursor: closingSnapshot.budgeted,
-      reversalBudgetedCursor: reversalSnapshot.budgeted,
-    };
+  const sourceStates = buildSourceStates({
+    sourcePriority: input.sourcePriority,
+    sources: input.sources,
+    reversalSnapshots: input.reversalSnapshots,
   });
   const items: CarryoverPlanItem[] = [];
 
   for (const negativeCategory of input.negativeCategories.filter((category) => category.balance < 0)) {
-    const needed = milliunits(-negativeCategory.balance);
     const reversalCategory = requireSnapshot(input.reversalSnapshots, negativeCategory.categoryId, "reversal category");
-    const allocations: {
-      sourceCategoryId: string;
-      sourceCategoryName?: string | undefined;
-      amount: Milliunits;
-    }[] = [];
-    const closingSourceUpdates: CategoryBudgetUpdate[] = [];
-    const reversalSourceUpdates: CategoryBudgetUpdate[] = [];
-    let remainingNeed = needed;
 
-    for (const sourceState of sourceStates) {
-      if (remainingNeed === 0) {
-        break;
-      }
-
-      const amount = milliunits(Math.min(sourceState.remainingAvailable, remainingNeed));
-      if (amount === 0) {
-        continue;
-      }
-
-      const closingBudgetedBefore = sourceState.closingBudgetedCursor;
-      const closingBudgetedAfter = milliunits(closingBudgetedBefore - amount);
-      const reversalBudgetedBefore = sourceState.reversalBudgetedCursor;
-      const reversalBudgetedAfter = milliunits(reversalBudgetedBefore + amount);
-
-      allocations.push({
-        sourceCategoryId: sourceState.categoryId,
-        ...(sourceState.categoryName ? { sourceCategoryName: sourceState.categoryName } : {}),
-        amount,
-      });
-      closingSourceUpdates.push({
-        categoryId: sourceState.categoryId,
-        ...(sourceState.categoryName ? { categoryName: sourceState.categoryName } : {}),
-        budgetedBefore: closingBudgetedBefore,
-        budgetedAfter: closingBudgetedAfter,
-        delta: milliunits(-amount),
-        role: "source",
-      });
-      reversalSourceUpdates.push({
-        categoryId: sourceState.categoryId,
-        ...(sourceState.categoryName ? { categoryName: sourceState.categoryName } : {}),
-        budgetedBefore: reversalBudgetedBefore,
-        budgetedAfter: reversalBudgetedAfter,
-        delta: amount,
-        role: "destination",
-      });
-
-      sourceState.remainingAvailable = milliunits(sourceState.remainingAvailable - amount);
-      sourceState.closingBudgetedCursor = closingBudgetedAfter;
-      sourceState.reversalBudgetedCursor = reversalBudgetedAfter;
-      remainingNeed = milliunits(remainingNeed - amount);
-    }
-
-    const carryoverAmount = milliunits(needed - remainingNeed);
-    const operations = buildOperations({
-      closingMonth: input.closingMonth,
-      reversalMonth: input.reversalMonth,
-      category: negativeCategory,
-      reversalCategory,
-      carryoverAmount,
-      closingSourceUpdates,
-      reversalSourceUpdates,
-    });
-
-    items.push({
-      categoryId: negativeCategory.categoryId,
-      ...(negativeCategory.categoryName ? { categoryName: negativeCategory.categoryName } : {}),
-      negativeBalance: needed,
-      carryoverAmount,
-      uncoveredAmount: remainingNeed,
-      status: carryoverStatus({ carryoverAmount, uncoveredAmount: remainingNeed }),
-      allocations,
-      operations,
-    });
+    items.push(
+      buildPlanItem({
+        closingMonth: input.closingMonth,
+        reversalMonth: input.reversalMonth,
+        category: negativeCategory,
+        reversalCategory,
+        sourceStates,
+      }),
+    );
   }
 
   return {
@@ -173,6 +112,119 @@ export function formatCarryoverPlan(plan: CarryoverPlan): string {
 
 export function formatCarryoverPlanJson(plan: CarryoverPlan): string {
   return JSON.stringify(plan, null, 2);
+}
+
+function buildSourceStates(input: {
+  readonly sourcePriority: readonly string[];
+  readonly sources: readonly CarryoverCategorySnapshot[];
+  readonly reversalSnapshots: readonly CarryoverCategorySnapshot[];
+}): SourceState[] {
+  return input.sourcePriority.map((categoryId) => {
+    const closingSnapshot = requireSnapshot(input.sources, categoryId, "closing source");
+    const reversalSnapshot = requireSnapshot(input.reversalSnapshots, categoryId, "reversal source");
+
+    return {
+      categoryId,
+      categoryName: closingSnapshot.categoryName ?? reversalSnapshot.categoryName,
+      remainingAvailable: milliunits(Math.max(closingSnapshot.balance, 0)),
+      closingBudgetedCursor: closingSnapshot.budgeted,
+      reversalBudgetedCursor: reversalSnapshot.budgeted,
+    };
+  });
+}
+
+function buildPlanItem(input: {
+  readonly closingMonth: BudgetMonth;
+  readonly reversalMonth: BudgetMonth;
+  readonly category: CarryoverCategorySnapshot;
+  readonly reversalCategory: CarryoverCategorySnapshot;
+  readonly sourceStates: SourceState[];
+}): CarryoverPlanItem {
+  const needed = milliunits(-input.category.balance);
+  const allocation = allocateFromSources({ needed, sourceStates: input.sourceStates });
+  const carryoverAmount = milliunits(needed - allocation.remainingNeed);
+  const operations = buildOperations({
+    closingMonth: input.closingMonth,
+    reversalMonth: input.reversalMonth,
+    category: input.category,
+    reversalCategory: input.reversalCategory,
+    carryoverAmount,
+    closingSourceUpdates: allocation.closingSourceUpdates,
+    reversalSourceUpdates: allocation.reversalSourceUpdates,
+  });
+
+  return {
+    categoryId: input.category.categoryId,
+    ...(input.category.categoryName ? { categoryName: input.category.categoryName } : {}),
+    negativeBalance: needed,
+    carryoverAmount,
+    uncoveredAmount: allocation.remainingNeed,
+    status: carryoverStatus({ carryoverAmount, uncoveredAmount: allocation.remainingNeed }),
+    allocations: allocation.allocations,
+    operations,
+  };
+}
+
+function allocateFromSources(input: { readonly needed: Milliunits; readonly sourceStates: SourceState[] }): {
+  readonly allocations: CarryoverAllocation[];
+  readonly closingSourceUpdates: CategoryBudgetUpdate[];
+  readonly reversalSourceUpdates: CategoryBudgetUpdate[];
+  readonly remainingNeed: Milliunits;
+} {
+  const allocations: CarryoverAllocation[] = [];
+  const closingSourceUpdates: CategoryBudgetUpdate[] = [];
+  const reversalSourceUpdates: CategoryBudgetUpdate[] = [];
+  let remainingNeed = input.needed;
+
+  for (const sourceState of input.sourceStates) {
+    if (remainingNeed === 0) {
+      break;
+    }
+
+    const amount = milliunits(Math.min(sourceState.remainingAvailable, remainingNeed));
+    if (amount === 0) {
+      continue;
+    }
+
+    const closingBudgetedBefore = sourceState.closingBudgetedCursor;
+    const closingBudgetedAfter = milliunits(closingBudgetedBefore - amount);
+    const reversalBudgetedBefore = sourceState.reversalBudgetedCursor;
+    const reversalBudgetedAfter = milliunits(reversalBudgetedBefore + amount);
+
+    allocations.push({
+      sourceCategoryId: sourceState.categoryId,
+      ...(sourceState.categoryName ? { sourceCategoryName: sourceState.categoryName } : {}),
+      amount,
+    });
+    closingSourceUpdates.push({
+      categoryId: sourceState.categoryId,
+      ...(sourceState.categoryName ? { categoryName: sourceState.categoryName } : {}),
+      budgetedBefore: closingBudgetedBefore,
+      budgetedAfter: closingBudgetedAfter,
+      delta: milliunits(-amount),
+      role: "source",
+    });
+    reversalSourceUpdates.push({
+      categoryId: sourceState.categoryId,
+      ...(sourceState.categoryName ? { categoryName: sourceState.categoryName } : {}),
+      budgetedBefore: reversalBudgetedBefore,
+      budgetedAfter: reversalBudgetedAfter,
+      delta: amount,
+      role: "destination",
+    });
+
+    sourceState.remainingAvailable = milliunits(sourceState.remainingAvailable - amount);
+    sourceState.closingBudgetedCursor = closingBudgetedAfter;
+    sourceState.reversalBudgetedCursor = reversalBudgetedAfter;
+    remainingNeed = milliunits(remainingNeed - amount);
+  }
+
+  return {
+    allocations,
+    closingSourceUpdates,
+    reversalSourceUpdates,
+    remainingNeed,
+  };
 }
 
 function buildOperations(input: {
@@ -232,7 +284,7 @@ function formatCarryoverPlanItem(item: CarryoverPlanItem): string[] {
       `  ${operation.month} ${operation.kind}: ${operation.summary}`,
       ...operation.updates.map(
         (update) =>
-          `    ${formatUpdateCategoryReference(update)} budgeted: ${formatMilliunits(update.budgetedBefore)} -> ${formatMilliunits(update.budgetedAfter)} (${formatDelta(update.delta)})`,
+          `    ${formatCategoryReference(update)} budgeted: ${formatMilliunits(update.budgetedBefore)} -> ${formatMilliunits(update.budgetedAfter)} (${formatDelta(update.delta)})`,
       ),
     ]),
   ];
@@ -273,10 +325,6 @@ function formatCategoryReference(category: {
   return category.categoryName
     ? `${category.categoryId} (${formatDisplayText(category.categoryName)})`
     : category.categoryId;
-}
-
-function formatUpdateCategoryReference(update: CategoryBudgetUpdate): string {
-  return update.categoryName ? `${update.categoryId} (${formatDisplayText(update.categoryName)})` : update.categoryId;
 }
 
 function formatDisplayText(value: string): string {
