@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { Command } from "commander";
 import { parseEnv } from "./config/env.js";
+import { listBudgetsCommand, listCategoriesCommand } from "./commands/listYnabCommand.js";
 import { runTopUpsCommand } from "./commands/runTopUpsCommand.js";
 
 const program = new Command();
@@ -12,6 +13,22 @@ program
   .version("0.1.0");
 
 const run = program.command("run").description("Run YNAB automation jobs");
+const list = program.command("list").description("List YNAB IDs for local rules configuration; read-only");
+
+list
+  .command("budgets")
+  .description("List YNAB budgets with names and IDs; read-only and not redacted")
+  .action(async () => {
+    await listBudgetsCommand({ env: parseEnv(process.env) });
+  });
+
+list
+  .command("categories")
+  .description("List YNAB categories with names and IDs for a budget; read-only and not redacted")
+  .requiredOption("--budget <budgetId>", "YNAB budget ID")
+  .action(async (options: { budget: string }) => {
+    await listCategoriesCommand({ env: parseEnv(process.env), options });
+  });
 
 run
   .command("top-up")

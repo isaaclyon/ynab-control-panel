@@ -16,3 +16,23 @@ export interface BudgetClient {
     readonly budgeted: Milliunits;
   }): Promise<void>;
 }
+
+export type BudgetListItem = {
+  readonly id: string;
+  readonly name: string;
+  readonly isDefault: boolean;
+};
+
+export type CategoryListItem = {
+  readonly id: string;
+  readonly name: string;
+  readonly categoryGroupId: string;
+  readonly categoryGroupName: string;
+  readonly hidden: boolean;
+};
+
+export interface YnabCatalogClient {
+  listBudgets(): Promise<readonly BudgetListItem[]>;
+
+  listCategories(input: { readonly budgetId: string }): Promise<readonly CategoryListItem[]>;
+}

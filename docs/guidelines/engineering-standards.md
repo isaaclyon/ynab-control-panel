@@ -7,6 +7,8 @@
   - `npm test`
   - `npm run test:coverage`
   - `npm run build`
+- Live smoke surface, when `.env` has a YNAB token:
+  - `npm run smoke:ynab`
 - New or changed behavior should be covered by tests before implementation when practical.
 - Integration tests have primacy for behavior crossing config parsing, job orchestration, YNAB ports, persistence, and idempotency.
 - Pure domain calculations should also have focused unit tests.
