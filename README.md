@@ -10,6 +10,7 @@ Backend-first TypeScript utilities for safe YNAB automation. The CLI runs typed 
 - Fetch category month state from YNAB.
 - Plan monthly category top-ups.
 - Plan category available transfers that move available money between categories by updating category `budgeted` amounts.
+- Preview end-of-month carryover plans that cover negative categories from priority sources and mirror the reversal in the next month.
 - Preview one user-visible planned operation per rule, even when that operation contains multiple YNAB updates.
 - Filter run commands to one rule with `--only <ruleId>` for dry-run-first testing and debugging.
 - Filter run commands to one budget with `--budget <budgetId>`.
@@ -43,6 +44,13 @@ npm run dev -- list categories --budget <budgetId>
 ```
 
 The `list` commands are read-only. They intentionally print full local YNAB names and IDs without redaction because their purpose is copy/paste configuration on your own machine.
+
+Dry-run an end-of-month carryover plan. This scans all non-internal, non-deleted categories with negative available balances in the closing month, covers them from the comma-separated source category priority list without making a source negative, and previews the next-month mirror reversal. It does not mutate YNAB or write audit records.
+
+```bash
+npm run dev -- carryover plan --budget <budgetId> --month 2026-06 --sources <sourceCategoryId1>,<sourceCategoryId2>
+npm run dev -- carryover plan --budget <budgetId> --month 2026-06 --sources <sourceCategoryId1>,<sourceCategoryId2> --json
+```
 
 Inspect local rules JSON without contacting YNAB:
 

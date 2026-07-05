@@ -30,6 +30,7 @@ dry-run output or YNAB category budget updates
 - Run output enriches category IDs with YNAB category names from read-only catalog data before formatting and before writing generic operation audit claims.
 - Run output includes a reason line for each operation or skipped disabled rule; these explanations are display text derived from domain reason codes and config state.
 - `check scheduled` verifies scheduled-run readiness with read-only YNAB calls and local filesystem checks; it must not call mutating adapter operations.
+- `carryover plan` is a dry-run-only assistant for previewing closing-month negative-balance cover moves and next-month mirror reversals; it reads YNAB category state but does not use audit state or expose apply mode.
 - Read-only `audit` commands inspect local audit history without requiring a YNAB token or constructing a YNAB client.
 - What it must not own: budgeting math or YNAB response interpretation.
 
@@ -83,6 +84,7 @@ dry-run output or YNAB category budget updates
 
 - YNAB mutations require an explicit apply mode.
 - Rule math remains pure and unit-testable.
+- Carryover math remains pure and separate from YNAB reads; the command layer gathers category snapshots and formats the dry-run plan.
 - External data is parsed at boundaries before entering core logic.
 - Integration-style job tests are the primary confidence layer for behavior that spans parsing, orchestration, idempotency, and adapter ports.
 - Scheduled runs must be idempotent for a given budget/rule/month.

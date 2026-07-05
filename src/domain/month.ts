@@ -36,3 +36,14 @@ export function currentBudgetMonth(now = new Date()): BudgetMonth {
 
   return parseBudgetMonth(`${year}-${month}`);
 }
+
+export function nextBudgetMonth(month: BudgetMonth): BudgetMonth {
+  const year = Number.parseInt(month.slice(0, 4), 10);
+  const monthNumber = Number.parseInt(month.slice(5, 7), 10);
+
+  if (monthNumber === 12) {
+    return parseBudgetMonth(`${year + 1}-01`);
+  }
+
+  return parseBudgetMonth(`${year}-${(monthNumber + 1).toString().padStart(2, "0")}`);
+}

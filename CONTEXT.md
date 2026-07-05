@@ -24,6 +24,12 @@
 
 **Category available transfer rule**: A budget rule that moves available money from one category to another by decreasing the source category's `budgeted` amount and increasing the destination category's `budgeted` amount. The transfer is capped by the source available balance after `leaveAvailable`; source `budgeted` may become negative when moving carried-over available money.
 
+**Carryover assistant**: A dry-run-only CLI workflow that previews how to carry negative category available balances from a closing budget month into the next budget month. It plans closing-month budget updates that cover negative categories from a priority list of positive source categories, plus next-month mirror updates that assign the negative amount back to the carried category and restore the same amounts to the original source categories.
+
+**Carryover source priority**: The ordered list of category IDs the carryover assistant may draw from when covering closing-month negative categories. Each source is capped by its closing-month available balance, so the assistant does not plan to make a source category negative.
+
+**Carryover reversal month**: The budget month immediately after the carryover closing month. The carryover assistant previews mirror budget updates in this month but does not mutate YNAB or write audit records.
+
 **Amount policy**: A typed rule field that calculates how much money a rule may move. The first policies are fixed amount and percent of available with an optional maximum.
 
 **Assignment amount**: The additional amount this app plans to budget for a category in a monthly top-up operation. It is added to the current YNAB `budgeted` amount when applying.
@@ -56,6 +62,8 @@
 - A planned budget operation may contain multiple category budget updates, but output and audit treat it as one operation.
 - The monthly top-up assignment amount is capped by both the configured monthly amount and the remaining gap to the target balance.
 - The category available transfer amount is capped by the source category's available balance after `leaveAvailable` and by its amount policy.
+- Carryover assistant planning treats all non-internal, non-deleted categories with negative available balance in the closing month as carryover candidates; it does not attempt to infer whether the overspending came from cash or credit-card accounts.
+- Carryover assistant source allocations are capped by positive closing-month available balances and are mirrored in the reversal month to the same source categories.
 - The audit log supports idempotency; it is not the source of truth for current YNAB balances.
 - Apply mode records an operation claim before mutating YNAB, then records the operation as applied after all child updates succeed. A claim without a matching applied record is a crash-recovery signal to inspect before retrying that budget/rule/month.
 - The scheduled-run health check is operational readiness evidence only; it does not reserve audit state or prove future YNAB balances will produce a non-no-op operation.
