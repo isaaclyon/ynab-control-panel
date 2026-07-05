@@ -24,6 +24,7 @@ dry-run output or YNAB category budget updates
 - Important boundary: dry-run is the default; mutation requires `--apply`.
 - Read-only `list` helpers may expose full local YNAB names and IDs for rules configuration, but never call mutating adapter operations.
 - `run rules` and `run scheduled` execute all enabled budget rules. `run top-up` remains a compatibility alias for the same rules runner.
+- Read-only `audit` commands inspect local audit history without requiring a YNAB token or constructing a YNAB client.
 - What it must not own: budgeting math or YNAB response interpretation.
 
 ### Config parsing
@@ -58,8 +59,8 @@ dry-run output or YNAB category budget updates
 
 ### Audit log
 
-- Responsibility: record operation claims and completions for safety and idempotency.
-- Important boundary: operation audit is keyed by budget, rule, and budget month.
+- Responsibility: record operation claims and completions for safety and idempotency, and expose a read-only local scan model for recovery commands.
+- Important boundary: operation audit is keyed by budget, rule, and budget month. Explicit audit scan commands surface a missing audit file as an error rather than treating it as empty.
 - New writes use generic budget operation records. Legacy monthly top-up records are still read so old audit history prevents duplicate application.
 - What it must not own: deciding how much to assign or transfer.
 

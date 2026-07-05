@@ -63,6 +63,21 @@ Scheduled entrypoint, intended for cron/systemd/Docker on the mini PC:
 npm run dev -- run scheduled --apply
 ```
 
+Inspect pending recovery operations in the local audit log; this is read-only and does not require a YNAB token:
+
+```bash
+npm run dev -- audit status
+npm run dev -- audit status --month 2026-07
+```
+
+Inspect one exact budget/rule/month audit key:
+
+```bash
+npm run dev -- audit inspect --budget <budgetId> --rule <ruleId> --month 2026-07
+```
+
+Use `--audit-log <path>` on either audit command to inspect a non-default JSONL file. Audit commands fail if the selected log file does not exist, so cron/systemd path mistakes do not look like an empty recovery queue. Audit output is local history only; compare with current YNAB before manually retrying a pending recovery operation.
+
 ## Rules JSON
 
 Monthly category top-up:
@@ -132,4 +147,4 @@ docker compose run --rm app run scheduled --apply
 
 The app intentionally does not run an embedded scheduler yet. Prefer host cron or a systemd timer on the mini PC calling the Docker command above.
 
-If a run crashes, inspect `data/audit-log.jsonl`. A `budget-operation-claimed` record without a matching `budget-operation-applied` record means the app reserved that budget/rule/month before or during one or more YNAB updates; check YNAB before manually retrying.
+If a run crashes, use `audit status` or `audit inspect` instead of reading raw JSONL first. A `pending-recovery` entry means the app reserved that budget/rule/month before or during one or more YNAB updates; check YNAB before manually retrying.
