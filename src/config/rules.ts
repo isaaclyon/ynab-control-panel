@@ -13,11 +13,11 @@ const monthlyCategoryTopUpRuleSchema = z.object({
   budgetId: z.string().min(1),
   categoryId: z.string().min(1),
   monthlyAmount: dollarAmountSchema.refine((value) => value > 0, "monthlyAmount must be positive"),
-  targetBalance: dollarAmountSchema.refine((value) => value >= 0, "targetBalance cannot be negative")
+  targetBalance: dollarAmountSchema.refine((value) => value >= 0, "targetBalance cannot be negative"),
 });
 
 const rulesConfigSchema = z.object({
-  rules: z.array(monthlyCategoryTopUpRuleSchema).min(1)
+  rules: z.array(monthlyCategoryTopUpRuleSchema).min(1),
 });
 
 export function parseRulesConfig(input: unknown): RulesConfig {

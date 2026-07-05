@@ -9,7 +9,7 @@ export type AppEnv = {
 const envSchema = z.object({
   YNAB_ACCESS_TOKEN: z.string().min(1),
   YNAB_RULES_FILE: z.string().min(1).default("config/rules.json"),
-  YNAB_AUDIT_LOG_FILE: z.string().min(1).default("data/audit-log.jsonl")
+  YNAB_AUDIT_LOG_FILE: z.string().min(1).default("data/audit-log.jsonl"),
 });
 
 export function parseEnv(input: NodeJS.ProcessEnv): AppEnv {
@@ -18,6 +18,6 @@ export function parseEnv(input: NodeJS.ProcessEnv): AppEnv {
   return {
     ynabAccessToken: parsed.YNAB_ACCESS_TOKEN,
     rulesFile: parsed.YNAB_RULES_FILE,
-    auditLogFile: parsed.YNAB_AUDIT_LOG_FILE
+    auditLogFile: parsed.YNAB_AUDIT_LOG_FILE,
   };
 }

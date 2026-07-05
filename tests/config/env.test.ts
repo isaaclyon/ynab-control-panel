@@ -6,7 +6,7 @@ describe("env parsing", () => {
     expect(parseEnv({ YNAB_ACCESS_TOKEN: "token" })).toEqual({
       ynabAccessToken: "token",
       rulesFile: "config/rules.json",
-      auditLogFile: "data/audit-log.jsonl"
+      auditLogFile: "data/audit-log.jsonl",
     });
   });
 

@@ -25,7 +25,7 @@ describe("JSONL top-up audit log", () => {
       month,
       assignmentAmount: milliunits(50_000),
       budgetedAfter: milliunits(75_000),
-      appliedAt: "2026-07-01T00:00:00.000Z"
+      appliedAt: "2026-07-01T00:00:00.000Z",
     });
 
     await expect(log.hasClaimedOrApplied("rule-1", month)).resolves.toBe(true);
@@ -52,7 +52,7 @@ describe("JSONL top-up audit log", () => {
       month,
       assignmentAmount: milliunits(50_000),
       budgetedAfter: milliunits(75_000),
-      claimedAt: "2026-07-01T00:00:00.000Z"
+      claimedAt: "2026-07-01T00:00:00.000Z",
     });
 
     await expect(log.hasClaimedOrApplied("rule-1", month)).resolves.toBe(true);

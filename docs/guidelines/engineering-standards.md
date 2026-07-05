@@ -4,9 +4,12 @@
 
 - Required command surface:
   - `npm run typecheck`
+  - `npm run lint`
+  - `npm run format:check`
   - `npm test`
   - `npm run test:coverage`
   - `npm run build`
+- `npm run check` runs typechecking, linting, and formatting checks together.
 - Live smoke surface, when `.env` has a YNAB token:
   - `npm run smoke:ynab`
 - New or changed behavior should be covered by tests before implementation when practical.
@@ -17,8 +20,15 @@
 ## Typing
 
 - TypeScript strict mode is required.
+- `npm run typecheck` typechecks `src/`, `tests/`, `scripts/`, and Vitest config with strict TypeScript settings.
 - Avoid unsafe casts. If a cast is needed at an external boundary, keep it local and convert into domain types immediately.
 - Domain money values use YNAB milliunits, not floating-point dollars.
+
+## Linting and formatting
+
+- Biome owns linting and formatting.
+- Run `npm run lint` for lint checks.
+- Run `npm run format:check` to verify formatting and `npm run format` to apply formatting.
 
 ## Boundary design
 

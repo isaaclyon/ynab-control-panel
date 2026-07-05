@@ -8,10 +8,14 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm run lint && npm run format:check",
     "dev": "tsx src/cli.ts",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
     "start": "node dist/cli.js",
     "smoke:ynab": "tsx scripts/smokeYnab.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -22,6 +26,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.2",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "tsx": "^4.21.0",

@@ -7,10 +7,7 @@ import { runTopUpsCommand } from "./commands/runTopUpsCommand.js";
 
 const program = new Command();
 
-program
-  .name("ynab-control-panel")
-  .description("Backend-first YNAB automation utilities")
-  .version("0.1.0");
+program.name("ynab-control-panel").description("Backend-first YNAB automation utilities").version("0.1.0");
 
 const run = program.command("run").description("Run YNAB automation jobs");
 const list = program.command("list").description("List YNAB IDs for local rules configuration; read-only");

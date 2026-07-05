@@ -9,7 +9,7 @@ import { currentBudgetMonth } from "../src/domain/month.js";
 import { formatTopUpRunResults, runMonthlyCategoryTopUps } from "../src/jobs/runMonthlyCategoryTopUps.js";
 import { YnabBudgetClient } from "../src/ynab/ynabBudgetClient.js";
 
-const accessToken = process.env.YNAB_ACCESS_TOKEN;
+const accessToken = process.env["YNAB_ACCESS_TOKEN"];
 
 if (!accessToken || accessToken === "replace-me") {
   throw new Error("YNAB_ACCESS_TOKEN must be set in .env before running the live smoke test");
@@ -40,9 +40,9 @@ const smokeRule = parseRulesConfig({
       budgetId: plan.id,
       categoryId: category.id,
       monthlyAmount: "0.01",
-      targetBalance: "0.01"
-    }
-  ]
+      targetBalance: "0.01",
+    },
+  ],
 });
 const smokeDir = await mkdtemp(join(tmpdir(), "ynab-live-smoke-"));
 const auditLog = new JsonlTopUpAuditLog(join(smokeDir, "audit.jsonl"));
@@ -51,7 +51,7 @@ const results = await runMonthlyCategoryTopUps({
   month: currentBudgetMonth(),
   dryRun: true,
   budgetClient: new YnabBudgetClient(accessToken),
-  auditLog
+  auditLog,
 });
 
 await writeFile(join(smokeDir, "rules.json"), JSON.stringify(smokeRule, null, 2), "utf8");

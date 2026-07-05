@@ -24,7 +24,7 @@ export async function runMonthlyCategoryTopUps(input: {
     const snapshot = await input.budgetClient.getCategoryMonth({
       budgetId: rule.budgetId,
       month: input.month,
-      categoryId: rule.categoryId
+      categoryId: rule.categoryId,
     });
     const plan = planMonthlyCategoryTopUp({ rule, month: input.month, snapshot });
 
@@ -51,13 +51,13 @@ export async function runMonthlyCategoryTopUps(input: {
         month: input.month,
         assignmentAmount: plan.assignmentAmount,
         budgetedAfter: plan.budgetedAfter,
-        claimedAt: appliedAt
+        claimedAt: appliedAt,
       });
       await input.budgetClient.updateCategoryBudgeted({
         budgetId: rule.budgetId,
         month: input.month,
         categoryId: rule.categoryId,
-        budgeted: plan.budgetedAfter
+        budgeted: plan.budgetedAfter,
       });
       await input.auditLog.append({
         kind: "monthly-category-top-up-applied",
@@ -67,7 +67,7 @@ export async function runMonthlyCategoryTopUps(input: {
         month: input.month,
         assignmentAmount: plan.assignmentAmount,
         budgetedAfter: plan.budgetedAfter,
-        appliedAt
+        appliedAt,
       });
 
       return { plan, status: "applied" };
@@ -88,7 +88,7 @@ export function formatTopUpRunResults(results: readonly TopUpRunResult[]): strin
         `  month: ${plan.month}`,
         `  balance: ${formatMilliunits(plan.balanceBefore)} / target ${formatMilliunits(plan.targetBalance)}`,
         `  assignment: ${formatMilliunits(plan.assignmentAmount)}`,
-        `  budgeted: ${formatMilliunits(plan.budgetedBefore)} -> ${formatMilliunits(plan.budgetedAfter)}`
+        `  budgeted: ${formatMilliunits(plan.budgetedBefore)} -> ${formatMilliunits(plan.budgetedAfter)}`,
       ].join("\n");
     })
     .join("\n\n");

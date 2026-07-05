@@ -143,7 +143,7 @@ function normalizeRecord(record: TopUpAuditRecord): TopUpAuditRecord {
   return {
     ...record,
     assignmentAmount: milliunits(record.assignmentAmount),
-    budgetedAfter: milliunits(record.budgetedAfter)
+    budgetedAfter: milliunits(record.budgetedAfter),
   };
 }
 
@@ -154,17 +154,17 @@ function isTopUpAuditRecord(input: unknown): input is TopUpAuditRecord {
 
   const candidate = input as Record<string, unknown>;
   const hasCommonFields =
-    typeof candidate.ruleId === "string" &&
-    typeof candidate.budgetId === "string" &&
-    typeof candidate.categoryId === "string" &&
-    typeof candidate.month === "string" &&
-    typeof candidate.assignmentAmount === "number" &&
-    typeof candidate.budgetedAfter === "number";
+    typeof candidate["ruleId"] === "string" &&
+    typeof candidate["budgetId"] === "string" &&
+    typeof candidate["categoryId"] === "string" &&
+    typeof candidate["month"] === "string" &&
+    typeof candidate["assignmentAmount"] === "number" &&
+    typeof candidate["budgetedAfter"] === "number";
 
   return (
     hasCommonFields &&
-    ((candidate.kind === "monthly-category-top-up-claimed" && typeof candidate.claimedAt === "string") ||
-      (candidate.kind === "monthly-category-top-up-applied" && typeof candidate.appliedAt === "string"))
+    ((candidate["kind"] === "monthly-category-top-up-claimed" && typeof candidate["claimedAt"] === "string") ||
+      (candidate["kind"] === "monthly-category-top-up-applied" && typeof candidate["appliedAt"] === "string"))
   );
 }
 

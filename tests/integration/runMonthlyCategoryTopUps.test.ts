@@ -32,9 +32,9 @@ describe("monthly top-up job", () => {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
+        balance: milliunits(100_000),
       }),
-      updateCategoryBudgeted: vi.fn()
+      updateCategoryBudgeted: vi.fn(),
     };
 
     const results = await runMonthlyCategoryTopUps({
@@ -42,7 +42,7 @@ describe("monthly top-up job", () => {
       month: parseBudgetMonth("2026-07"),
       dryRun: true,
       budgetClient,
-      auditLog
+      auditLog,
     });
 
     expect(results[0]?.status).toBe("dry-run");
@@ -56,9 +56,9 @@ describe("monthly top-up job", () => {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
+        balance: milliunits(100_000),
       }),
-      updateCategoryBudgeted: vi.fn()
+      updateCategoryBudgeted: vi.fn(),
     };
     const month = parseBudgetMonth("2026-07");
 
@@ -68,7 +68,7 @@ describe("monthly top-up job", () => {
       dryRun: false,
       budgetClient,
       auditLog,
-      now: new Date("2026-07-01T00:00:00.000Z")
+      now: new Date("2026-07-01T00:00:00.000Z"),
     });
     const secondRun = await runMonthlyCategoryTopUps({
       config: configFixture(),
@@ -76,7 +76,7 @@ describe("monthly top-up job", () => {
       dryRun: false,
       budgetClient,
       auditLog,
-      now: new Date("2026-07-01T00:01:00.000Z")
+      now: new Date("2026-07-01T00:01:00.000Z"),
     });
 
     expect(firstRun[0]?.status).toBe("applied");
@@ -86,11 +86,11 @@ describe("monthly top-up job", () => {
       budgetId: "budget-1",
       month,
       categoryId: "category-1",
-      budgeted: 75_000
+      budgeted: 75_000,
     });
     expect(auditLog.records.map((record) => record.kind)).toEqual([
       "monthly-category-top-up-claimed",
-      "monthly-category-top-up-applied"
+      "monthly-category-top-up-applied",
     ]);
   });
 
@@ -105,15 +105,15 @@ describe("monthly top-up job", () => {
       month,
       assignmentAmount: milliunits(50_000),
       budgetedAfter: milliunits(75_000),
-      appliedAt: "2026-07-01T00:00:00.000Z"
+      appliedAt: "2026-07-01T00:00:00.000Z",
     });
     const budgetClient: BudgetClient = {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(75_000),
         activity: milliunits(-25_000),
-        balance: milliunits(125_000)
+        balance: milliunits(125_000),
       }),
-      updateCategoryBudgeted: vi.fn()
+      updateCategoryBudgeted: vi.fn(),
     };
 
     const dryRun = await runMonthlyCategoryTopUps({
@@ -121,14 +121,14 @@ describe("monthly top-up job", () => {
       month,
       dryRun: true,
       budgetClient,
-      auditLog
+      auditLog,
     });
     const applyRun = await runMonthlyCategoryTopUps({
       config: configFixture(),
       month,
       dryRun: false,
       budgetClient,
-      auditLog
+      auditLog,
     });
 
     expect(dryRun[0]?.status).toBe("skipped-already-claimed");
@@ -143,14 +143,14 @@ describe("monthly top-up job", () => {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
+        balance: milliunits(100_000),
       }),
-      updateCategoryBudgeted: vi.fn().mockResolvedValue(undefined)
+      updateCategoryBudgeted: vi.fn().mockResolvedValue(undefined),
     };
 
     const [firstRun, secondRun] = await Promise.all([
       runMonthlyCategoryTopUps({ config: configFixture(), month, dryRun: false, budgetClient, auditLog }),
-      runMonthlyCategoryTopUps({ config: configFixture(), month, dryRun: false, budgetClient, auditLog })
+      runMonthlyCategoryTopUps({ config: configFixture(), month, dryRun: false, budgetClient, auditLog }),
     ]);
 
     expect([firstRun[0]?.status, secondRun[0]?.status].sort()).toEqual(["applied", "skipped-already-claimed"]);
@@ -166,11 +166,11 @@ describe("monthly top-up job", () => {
         getCategoryMonth: vi.fn().mockResolvedValue({
           budgeted: milliunits(25_000),
           activity: milliunits(0),
-          balance: milliunits(250_000)
+          balance: milliunits(250_000),
         }),
-        updateCategoryBudgeted: vi.fn()
+        updateCategoryBudgeted: vi.fn(),
       },
-      auditLog: new MemoryAuditLog()
+      auditLog: new MemoryAuditLog(),
     });
 
     expect(results[0]?.status).toBe("skipped-no-op");
@@ -187,8 +187,8 @@ function configFixture() {
         budgetId: "budget-1",
         categoryId: "category-1",
         monthlyAmount: milliunits(50_000),
-        targetBalance: milliunits(200_000)
-      }
-    ]
+        targetBalance: milliunits(200_000),
+      },
+    ],
   };
 }
