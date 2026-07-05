@@ -3,7 +3,7 @@ import "dotenv/config";
 import { Command } from "commander";
 import { parseEnv } from "./config/env.js";
 import { listBudgetsCommand, listCategoriesCommand } from "./commands/listYnabCommand.js";
-import { runTopUpsCommand } from "./commands/runTopUpsCommand.js";
+import { runRulesCommand } from "./commands/runRulesCommand.js";
 
 const program = new Command();
 
@@ -28,13 +28,23 @@ list
   });
 
 run
-  .command("top-up")
-  .description("Run monthly category top-up rules; dry-run unless --apply is provided")
+  .command("rules")
+  .description("Run all enabled budget rules; dry-run unless --apply is provided")
   .option("--month <yyyy-mm>", "budget month to operate on; defaults to the current UTC month")
   .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
   .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
   .action(async (options: { month?: string; rules?: string; apply: boolean }) => {
-    await runTopUpsCommand({ env: parseEnv(process.env), options });
+    await runRulesCommand({ env: parseEnv(process.env), options });
+  });
+
+run
+  .command("top-up")
+  .description("Compatibility alias for run rules; dry-run unless --apply is provided")
+  .option("--month <yyyy-mm>", "budget month to operate on; defaults to the current UTC month")
+  .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
+  .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
+  .action(async (options: { month?: string; rules?: string; apply: boolean }) => {
+    await runRulesCommand({ env: parseEnv(process.env), options });
   });
 
 run
@@ -44,7 +54,7 @@ run
   .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
   .option("--apply", "apply changes to YNAB instead of printing a dry run", false)
   .action(async (options: { month?: string; rules?: string; apply: boolean }) => {
-    await runTopUpsCommand({ env: parseEnv(process.env), options });
+    await runRulesCommand({ env: parseEnv(process.env), options });
   });
 
 try {

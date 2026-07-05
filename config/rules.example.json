@@ -7,6 +7,16 @@
       "categoryId": "replace-with-category-id",
       "monthlyAmount": "250.00",
       "targetBalance": "1000.00"
+    },
+    {
+      "id": "sweep-dining-extra",
+      "type": "category-available-transfer",
+      "enabled": false,
+      "budgetId": "replace-with-budget-id",
+      "fromCategoryId": "replace-with-source-category-id",
+      "toCategoryId": "replace-with-destination-category-id",
+      "amount": { "type": "percent-of-available", "percent": 50, "max": "100.00" },
+      "leaveAvailable": "25.00"
     }
   ]
 }

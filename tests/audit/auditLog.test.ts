@@ -58,6 +58,74 @@ describe("JSONL top-up audit log", () => {
     await expect(log.hasClaimedOrApplied("rule-1", month)).resolves.toBe(true);
   });
 
+  it("persists generic operation claims and distinguishes claim-only from applied", async () => {
+    const log = new JsonlTopUpAuditLog(join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl"));
+    const month = parseBudgetMonth("2026-07");
+
+    await log.append({
+      kind: "budget-operation-claimed",
+      ruleId: "transfer-1",
+      ruleType: "category-available-transfer",
+      budgetId: "budget-1",
+      month,
+      operation: {
+        ruleId: "transfer-1",
+        ruleType: "category-available-transfer",
+        budgetId: "budget-1",
+        month,
+        summary: "move $50.00 from source to destination",
+        reason: "transfer-needed",
+        updates: [
+          {
+            categoryId: "source",
+            budgetedBefore: milliunits(100_000),
+            budgetedAfter: milliunits(50_000),
+            delta: milliunits(-50_000),
+            role: "source",
+          },
+          {
+            categoryId: "destination",
+            budgetedBefore: milliunits(10_000),
+            budgetedAfter: milliunits(60_000),
+            delta: milliunits(50_000),
+            role: "destination",
+          },
+        ],
+      },
+      claimedAt: "2026-07-01T00:00:00.000Z",
+    });
+
+    await expect(log.getOperationState({ ruleId: "transfer-1", budgetId: "budget-1", month })).resolves.toBe("claimed");
+
+    await log.append({
+      kind: "budget-operation-applied",
+      ruleId: "transfer-1",
+      ruleType: "category-available-transfer",
+      budgetId: "budget-1",
+      month,
+      appliedAt: "2026-07-01T00:00:01.000Z",
+    });
+
+    await expect(log.getOperationState({ ruleId: "transfer-1", budgetId: "budget-1", month })).resolves.toBe("applied");
+  });
+
+  it("keys generic operation state by budget id as well as rule and month", async () => {
+    const log = new JsonlTopUpAuditLog(join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl"));
+    const month = parseBudgetMonth("2026-07");
+
+    await log.append({
+      kind: "budget-operation-applied",
+      ruleId: "rule-1",
+      ruleType: "monthly-category-top-up",
+      budgetId: "budget-1",
+      month,
+      appliedAt: "2026-07-01T00:00:00.000Z",
+    });
+
+    await expect(log.getOperationState({ ruleId: "rule-1", budgetId: "budget-1", month })).resolves.toBe("applied");
+    await expect(log.getOperationState({ ruleId: "rule-1", budgetId: "budget-2", month })).resolves.toBe("none");
+  });
+
   it("serializes exclusive operations for the same rule and month", async () => {
     const log = new JsonlTopUpAuditLog(join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl"));
     const month = parseBudgetMonth("2026-07");

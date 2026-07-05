@@ -1,6 +1,6 @@
 import type { BudgetMonth } from "../domain/month.js";
 import type { Milliunits } from "../domain/money.js";
-import type { CategoryMonthSnapshot } from "../domain/monthlyCategoryTopUp.js";
+import type { CategoryMonthSnapshot } from "../domain/categoryMonth.js";
 
 export interface BudgetClient {
   getCategoryMonth(input: {

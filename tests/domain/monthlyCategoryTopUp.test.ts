@@ -6,6 +6,7 @@ import { planMonthlyCategoryTopUp, type MonthlyCategoryTopUpRule } from "../../s
 const rule: MonthlyCategoryTopUpRule = {
   id: "rule-1",
   type: "monthly-category-top-up",
+  enabled: true,
   budgetId: "budget-1",
   categoryId: "category-1",
   monthlyAmount: milliunits(50_000),
