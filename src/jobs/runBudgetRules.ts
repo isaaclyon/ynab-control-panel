@@ -31,6 +31,7 @@ export type DisabledBudgetRuleRunResult = {
   readonly status: "skipped-disabled";
   readonly ruleId: string;
   readonly ruleType: BudgetRule["type"];
+  readonly description?: string | undefined;
   readonly budgetId: string;
   readonly month: BudgetMonth;
   readonly reason: "rule-disabled";
@@ -54,6 +55,11 @@ export type BudgetRuleRunSummary = {
   readonly totalMovedOrBudgeted: Milliunits;
 };
 
+export type BudgetRuleRunOutput = {
+  readonly summary: BudgetRuleRunSummary;
+  readonly results: readonly BudgetRuleRunResult[];
+};
+
 export async function runBudgetRules(input: {
   readonly config: RulesConfig;
   readonly month: BudgetMonth;
@@ -71,6 +77,7 @@ export async function runBudgetRules(input: {
         status: "skipped-disabled",
         ruleId: rule.id,
         ruleType: rule.type,
+        ...(rule.description ? { description: rule.description } : {}),
         budgetId: rule.budgetId,
         month: input.month,
         reason: "rule-disabled",
@@ -184,10 +191,28 @@ export function formatBudgetRuleRunResults(
   return details ? `${details}\n\n${summary}` : summary;
 }
 
+export function formatBudgetRuleRunResultsJson(
+  results: readonly BudgetRuleRunResult[],
+  options: { readonly totalRulesConsidered?: number } = {},
+): string {
+  return JSON.stringify(toBudgetRuleRunOutput(results, options), null, 2);
+}
+
+export function toBudgetRuleRunOutput(
+  results: readonly BudgetRuleRunResult[],
+  options: { readonly totalRulesConsidered?: number } = {},
+): BudgetRuleRunOutput {
+  return {
+    summary: summarizeBudgetRuleRun({ results, ...options }),
+    results,
+  };
+}
+
 function formatBudgetRuleRunResult(result: BudgetRuleRunResult): string {
   if (result.status === "skipped-disabled") {
     return [
       `${result.status}: ${result.ruleId} (${result.ruleType})`,
+      ...formatDescriptionLines(result.description),
       `  month: ${result.month}`,
       `  reason: ${formatRunReason(result.reason)}`,
     ].join("\n");
@@ -195,6 +220,7 @@ function formatBudgetRuleRunResult(result: BudgetRuleRunResult): string {
 
   return [
     `${result.status}: ${result.operation.ruleId} (${result.operation.ruleType})`,
+    ...formatDescriptionLines(result.operation.description),
     `  month: ${result.operation.month}`,
     `  ${result.operation.summary}`,
     `  reason: ${formatResultReason(result)}`,
@@ -203,6 +229,10 @@ function formatBudgetRuleRunResult(result: BudgetRuleRunResult): string {
         `  ${formatCategoryReference(update)} budgeted: ${formatMilliunits(update.budgetedBefore)} -> ${formatMilliunits(update.budgetedAfter)} (${formatDelta(update.delta)})`,
     ),
   ].join("\n");
+}
+
+function formatDescriptionLines(description: string | undefined): string[] {
+  return description ? [`  description: ${formatDisplayText(description)}`] : [];
 }
 
 function formatResultReason(result: BudgetRuleOperationRunResult): string {
@@ -258,7 +288,11 @@ function formatCategoryReference(update: CategoryBudgetUpdate): string {
 }
 
 function formatCategoryName(name: string): string {
-  return name.replace(/[\t\n\r]+/g, " ");
+  return formatDisplayText(name);
+}
+
+function formatDisplayText(value: string): string {
+  return value.replace(/[\t\n\r]+/g, " ");
 }
 
 function formatRunReason(reason: string): string {

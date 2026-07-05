@@ -8,10 +8,12 @@ export type RulesConfig = {
 };
 
 const enabledSchema = z.boolean().default(true);
+const ruleDescriptionSchema = z.string().trim().min(1, "description cannot be blank").optional();
 
 const monthlyCategoryTopUpRuleSchema = z.object({
   id: z.string().min(1),
   type: z.literal("monthly-category-top-up"),
+  description: ruleDescriptionSchema,
   enabled: enabledSchema,
   budgetId: z.string().min(1),
   categoryId: z.string().min(1),
@@ -39,6 +41,7 @@ const categoryAvailableTransferRuleSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("category-available-transfer"),
+    description: ruleDescriptionSchema,
     enabled: enabledSchema,
     budgetId: z.string().min(1),
     fromCategoryId: z.string().min(1),

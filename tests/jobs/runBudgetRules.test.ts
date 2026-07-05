@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { PlannedBudgetOperation } from "../../src/domain/budgetOperation.js";
 import { parseBudgetMonth } from "../../src/domain/month.js";
 import { milliunits } from "../../src/domain/money.js";
-import { formatBudgetRuleRunResults, summarizeBudgetRuleRun } from "../../src/jobs/runBudgetRules.js";
+import {
+  formatBudgetRuleRunResults,
+  formatBudgetRuleRunResultsJson,
+  summarizeBudgetRuleRun,
+} from "../../src/jobs/runBudgetRules.js";
 
 describe("budget rule run summary", () => {
   it("counts dry-run, applied, skipped, no-op, disabled, and pending-recovery outcomes", () => {
@@ -47,6 +51,7 @@ describe("budget rule run summary", () => {
         status: "skipped-disabled",
         ruleId: "disabled-rule",
         ruleType: "monthly-category-top-up",
+        description: "Disabled until payday",
         budgetId: "budget-1",
         month: parseBudgetMonth("2026-07"),
         reason: "rule-disabled",
@@ -54,13 +59,29 @@ describe("budget rule run summary", () => {
     ]);
 
     expect(output).toContain("dry-run: transfer-1 (category-available-transfer)");
+    expect(output).toContain("description: Sweep dining leftovers");
     expect(output).toContain("reason: transfer needed from the source category to the destination category");
     expect(output).toContain("skipped-disabled: disabled-rule (monthly-category-top-up)");
+    expect(output).toContain("description: Disabled until payday");
     expect(output).toContain("reason: skipped because the rule is disabled in config");
     expect(output).toContain("Summary:\n  rules considered: 2");
     expect(output).toContain("  planned operations: 1");
     expect(output).toContain("  skipped disabled rules: 1");
     expect(output).toContain("  total moved or budgeted: $50.00");
+  });
+
+  it("prints sanitized descriptions and includes them in structured output", () => {
+    const results = [
+      {
+        operation: { ...topUpOperation("top-up", milliunits(25_000)), description: "Line one\nLine two" },
+        status: "dry-run" as const,
+      },
+    ];
+
+    expect(formatBudgetRuleRunResults(results)).toContain("description: Line one Line two");
+    expect(JSON.parse(formatBudgetRuleRunResultsJson(results)).results[0].operation.description).toBe(
+      "Line one\nLine two",
+    );
   });
 
   it("prints no-op explanations from operation reasons", () => {
@@ -156,6 +177,7 @@ function transferOperation(ruleId: string, amount: number): PlannedBudgetOperati
   return {
     ruleId,
     ruleType: "category-available-transfer",
+    description: "Sweep dining leftovers",
     budgetId: "budget-1",
     month: parseBudgetMonth("2026-07"),
     summary: `move ${amount} milliunits`,

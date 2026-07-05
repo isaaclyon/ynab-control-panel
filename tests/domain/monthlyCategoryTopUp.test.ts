@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseBudgetMonth } from "../../src/domain/month.js";
 import { milliunits } from "../../src/domain/money.js";
-import { planMonthlyCategoryTopUp, type MonthlyCategoryTopUpRule } from "../../src/domain/monthlyCategoryTopUp.js";
+import {
+  planMonthlyCategoryTopUp,
+  planMonthlyCategoryTopUpOperation,
+  type MonthlyCategoryTopUpRule,
+} from "../../src/domain/monthlyCategoryTopUp.js";
 
 const rule: MonthlyCategoryTopUpRule = {
   id: "rule-1",
@@ -59,5 +63,19 @@ describe("monthly category top-up planning", () => {
     expect(plan.assignmentAmount).toBe(0);
     expect(plan.budgetedAfter).toBe(25_000);
     expect(plan.reason).toBe("target-already-met");
+  });
+
+  it("copies the rule description to the planned operation", () => {
+    const operation = planMonthlyCategoryTopUpOperation({
+      rule: { ...rule, description: "Emergency fund target" },
+      month: parseBudgetMonth("2026-07"),
+      snapshot: {
+        budgeted: milliunits(25_000),
+        activity: milliunits(0),
+        balance: milliunits(100_000),
+      },
+    });
+
+    expect(operation.description).toBe("Emergency fund target");
   });
 });

@@ -75,10 +75,10 @@ export function formatRulesValidation(path: string, config: RulesConfig): string
 export function formatRulesList(path: string, config: RulesConfig): string {
   return [
     `Rules in ${path}:`,
-    "ruleId\ttype\tenabled\tbudgetId\tcategories",
+    "ruleId\ttype\tenabled\tbudgetId\tcategories\tdescription",
     ...config.rules.map(
       (rule) =>
-        `${sanitizeCell(rule.id)}\t${rule.type}\t${rule.enabled ? "yes" : "no"}\t${sanitizeCell(rule.budgetId)}\t${sanitizeCell(formatRuleCategories(rule))}`,
+        `${sanitizeCell(rule.id)}\t${rule.type}\t${rule.enabled ? "yes" : "no"}\t${sanitizeCell(rule.budgetId)}\t${sanitizeCell(formatRuleCategories(rule))}\t${sanitizeCell(rule.description ?? "")}`,
     ),
     "No YNAB calls were performed.",
   ].join("\n");
@@ -88,6 +88,7 @@ export function formatRuleExplanation(rule: BudgetRule): string {
   const commonLines = [
     `ruleId: ${rule.id}`,
     `type: ${rule.type}`,
+    ...(rule.description ? [`description: ${sanitizeCell(rule.description)}`] : []),
     `enabled: ${rule.enabled ? "yes" : "no"}`,
     `budgetId: ${rule.budgetId}`,
   ];

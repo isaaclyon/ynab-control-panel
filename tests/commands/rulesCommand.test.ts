@@ -26,7 +26,7 @@ describe("rules inspection commands", () => {
     expect(write).toHaveBeenCalledWith(expect.stringContaining("No YNAB calls were performed."));
   });
 
-  it("lists rule IDs, types, enabled state, budgets, and categories", async () => {
+  it("lists rule IDs, types, enabled state, budgets, categories, and descriptions", async () => {
     const write = vi.fn();
     const loadRulesConfig = vi.fn().mockResolvedValue(configFixture());
 
@@ -39,10 +39,12 @@ describe("rules inspection commands", () => {
 
     expect(loadRulesConfig).toHaveBeenCalledWith("default-rules.json");
     expect(write).toHaveBeenCalledWith(
-      expect.stringContaining("top-up-1\tmonthly-category-top-up\tyes\tbudget-1\tgroceries"),
+      expect.stringContaining("top-up-1\tmonthly-category-top-up\tyes\tbudget-1\tgroceries\tFund groceries"),
     );
     expect(write).toHaveBeenCalledWith(
-      expect.stringContaining("transfer-1\tcategory-available-transfer\tno\tbudget-1\tdining -> vacation"),
+      expect.stringContaining(
+        "transfer-1\tcategory-available-transfer\tno\tbudget-1\tdining -> vacation\tDining Vacation",
+      ),
     );
   });
 
@@ -57,6 +59,7 @@ describe("rules inspection commands", () => {
     });
 
     expect(write).toHaveBeenCalledWith(expect.stringContaining("ruleId: transfer-1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("description: Dining Vacation"));
     expect(write).toHaveBeenCalledWith(expect.stringContaining("enabled: no"));
     expect(write).toHaveBeenCalledWith(expect.stringContaining("amount: 50% of available, capped at $100.00"));
     expect(write).toHaveBeenCalledWith(
@@ -80,7 +83,7 @@ describe("rules inspection commands", () => {
     const config = configFixture();
 
     expect(formatRulesValidation("rules.json", config)).toContain("enabled: 1\n  disabled: 1");
-    expect(formatRulesList("rules.json", config)).toContain("ruleId\ttype\tenabled\tbudgetId\tcategories");
+    expect(formatRulesList("rules.json", config)).toContain("ruleId\ttype\tenabled\tbudgetId\tcategories\tdescription");
     const [firstRule] = config.rules;
     if (!firstRule) {
       throw new Error("missing fixture rule");
@@ -97,6 +100,7 @@ function configFixture() {
       {
         id: "top-up-1",
         type: "monthly-category-top-up" as const,
+        description: "Fund groceries",
         enabled: true,
         budgetId: "budget-1",
         categoryId: "groceries",
@@ -106,6 +110,7 @@ function configFixture() {
       {
         id: "transfer-1",
         type: "category-available-transfer" as const,
+        description: "Dining\nVacation",
         enabled: false,
         budgetId: "budget-1",
         fromCategoryId: "dining",

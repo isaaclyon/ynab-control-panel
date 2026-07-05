@@ -180,6 +180,38 @@ describe("JSONL top-up audit log", () => {
     expect(scan.entries[0]?.operation?.updates[0]).toMatchObject({ categoryId: "source", categoryName: "Savings" });
   });
 
+  it("preserves operation descriptions from persisted generic operation claims", async () => {
+    const path = join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl");
+    const month = parseBudgetMonth("2026-07");
+    await writeFile(
+      path,
+      `${JSON.stringify(genericClaim({ ruleId: "transfer-1", budgetId: "budget-1", month, description: "Sweep dining leftovers" }))}\n`,
+      "utf8",
+    );
+    const log = new JsonlTopUpAuditLog(path);
+
+    const scan = await log.scanOperationAuditEntries({ ruleId: "transfer-1", budgetId: "budget-1", month });
+
+    expect(scan.entries[0]?.operation?.description).toBe("Sweep dining leftovers");
+  });
+
+  it("ignores malformed persisted operation descriptions", async () => {
+    const path = join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl");
+    const month = parseBudgetMonth("2026-07");
+    const claim = genericClaim({ ruleId: "transfer-1", budgetId: "budget-1", month });
+    await writeFile(
+      path,
+      `${JSON.stringify({ ...claim, operation: { ...claim.operation, description: 123 } })}\n`,
+      "utf8",
+    );
+    const log = new JsonlTopUpAuditLog(path);
+
+    const scan = await log.scanOperationAuditEntries();
+
+    expect(scan.ignoredLineCount).toBe(1);
+    expect(scan.entries).toEqual([]);
+  });
+
   it("groups audit records so applied wins over claimed while keeping claim details", async () => {
     const log = new JsonlTopUpAuditLog(join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl"));
     const month = parseBudgetMonth("2026-07");
@@ -300,6 +332,7 @@ function genericClaim(input: {
   readonly ruleId: string;
   readonly budgetId: string;
   readonly month: ReturnType<typeof parseBudgetMonth>;
+  readonly description?: string;
   readonly claimedAt?: string;
 }) {
   return {
@@ -311,6 +344,7 @@ function genericClaim(input: {
     operation: {
       ruleId: input.ruleId,
       ruleType: "category-available-transfer" as const,
+      ...(input.description ? { description: input.description } : {}),
       budgetId: input.budgetId,
       month: input.month,
       summary: "move $50.00 from source to destination",

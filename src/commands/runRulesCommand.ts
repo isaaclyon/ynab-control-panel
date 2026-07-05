@@ -2,7 +2,12 @@ import { JsonlBudgetOperationAuditLog, type BudgetOperationAuditLog } from "../a
 import type { AppEnv } from "../config/env.js";
 import { loadRulesConfig, type RulesConfig } from "../config/rules.js";
 import { currentBudgetMonth, parseBudgetMonth, type BudgetMonth } from "../domain/month.js";
-import { formatBudgetRuleRunResults, runBudgetRules, type CategoryNameLookup } from "../jobs/runBudgetRules.js";
+import {
+  formatBudgetRuleRunResults,
+  formatBudgetRuleRunResultsJson,
+  runBudgetRules,
+  type CategoryNameLookup,
+} from "../jobs/runBudgetRules.js";
 import type { BudgetClient, YnabCatalogClient } from "../ynab/budgetClient.js";
 import { YnabBudgetClient } from "../ynab/ynabBudgetClient.js";
 
@@ -10,6 +15,8 @@ export type RunRulesOptions = {
   readonly month?: string;
   readonly apply: boolean;
   readonly rules?: string;
+  readonly json?: boolean;
+  readonly only?: string;
 };
 
 type RunRulesDependencies = {
@@ -35,11 +42,12 @@ export async function runRulesCommand(input: {
   const dependencies = { ...defaultDependencies, ...input.dependencies };
   const month = parseRequestedMonth(input.options.month, dependencies.currentBudgetMonth);
   const config = await dependencies.loadRulesConfig(input.options.rules ?? input.env.rulesFile);
+  const runConfig = filterRulesConfig(config, input.options.only);
   const budgetClient = dependencies.createBudgetClient(input.env.ynabAccessToken);
-  const categoryNameLookup = await loadCategoryNameLookup({ config, budgetClient });
+  const categoryNameLookup = await loadCategoryNameLookup({ config: runConfig, budgetClient });
   const auditLog = dependencies.createAuditLog(input.env.auditLogFile);
   const results = await runBudgetRules({
-    config,
+    config: runConfig,
     month,
     dryRun: !input.options.apply,
     budgetClient,
@@ -47,13 +55,25 @@ export async function runRulesCommand(input: {
     ...(categoryNameLookup ? { categoryNameLookup } : {}),
   });
 
-  (input.stdout ?? process.stdout).write(
-    `${formatBudgetRuleRunResults(results, { totalRulesConsidered: config.rules.length })}\n`,
-  );
+  const format = input.options.json ? formatBudgetRuleRunResultsJson : formatBudgetRuleRunResults;
+  (input.stdout ?? process.stdout).write(`${format(results, { totalRulesConsidered: runConfig.rules.length })}\n`);
 }
 
 function parseRequestedMonth(month: string | undefined, getCurrentBudgetMonth: () => BudgetMonth): BudgetMonth {
   return month ? parseBudgetMonth(month) : getCurrentBudgetMonth();
+}
+
+function filterRulesConfig(config: RulesConfig, only: string | undefined): RulesConfig {
+  if (!only) {
+    return config;
+  }
+
+  const rule = config.rules.find((candidate) => candidate.id === only);
+  if (!rule) {
+    throw new Error(`Rule not found: ${only}`);
+  }
+
+  return { rules: [rule] };
 }
 
 async function loadCategoryNameLookup(input: {

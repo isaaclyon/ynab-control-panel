@@ -90,4 +90,15 @@ describe("category available transfer planning", () => {
     expect(operation.reason).toBe("amount-policy-rounded-to-zero");
     expect(operation.updates.every((update) => update.delta === 0)).toBe(true);
   });
+
+  it("copies the rule description to the planned operation", () => {
+    const operation = planCategoryAvailableTransfer({
+      rule: { ...baseRule, description: "Sweep dining leftovers" },
+      month: parseBudgetMonth("2026-07"),
+      fromSnapshot: { budgeted: milliunits(100_000), activity: milliunits(0), balance: milliunits(200_000) },
+      toSnapshot: { budgeted: milliunits(10_000), activity: milliunits(0), balance: milliunits(10_000) },
+    });
+
+    expect(operation.description).toBe("Sweep dining leftovers");
+  });
 });
