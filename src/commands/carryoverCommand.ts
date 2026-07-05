@@ -22,18 +22,14 @@ type CarryoverDependencies = {
   readonly createClient: (accessToken: string) => CarryoverPlanClient;
 };
 
-const defaultDependencies: CarryoverDependencies = {
-  createClient: (accessToken) => new YnabBudgetClient(accessToken),
-};
-
 export async function carryoverPlanCommand(input: {
   readonly env: AppEnv;
   readonly options: CarryoverPlanOptions;
   readonly stdout?: Pick<NodeJS.WriteStream, "write">;
   readonly dependencies?: Partial<CarryoverDependencies>;
 }): Promise<void> {
-  const dependencies = { ...defaultDependencies, ...input.dependencies };
-  const client = dependencies.createClient(input.env.ynabAccessToken);
+  const createClient = input.dependencies?.createClient ?? ((accessToken: string) => new YnabBudgetClient(accessToken));
+  const client = createClient(input.env.ynabAccessToken);
   const closingMonth = parseBudgetMonth(input.options.month);
   const reversalMonth = nextBudgetMonth(closingMonth);
   const sourcePriority = parseSourcePriority(input.options.sources);
@@ -46,7 +42,7 @@ export async function carryoverPlanCommand(input: {
     categoryIds: categories.map((category) => category.id),
     categoryNames,
   });
-  const closingSourceSnapshots = await readMissingSourceSnapshots({
+  const closingSourceSnapshots = await readSourceSnapshots({
     client,
     budgetId: input.options.budget,
     month: closingMonth,
@@ -80,24 +76,31 @@ export async function carryoverPlanCommand(input: {
 }
 
 function parseSourcePriority(input: string): readonly string[] {
-  const sourcePriority = input
-    .split(",")
-    .map((source) => source.trim())
-    .filter((source) => source.length > 0);
+  const sourcePriority: string[] = [];
+  const seenSourceIds = new Set<string>();
+
+  for (const rawSource of input.split(",")) {
+    const source = rawSource.trim();
+    if (source.length === 0) {
+      continue;
+    }
+
+    if (seenSourceIds.has(source)) {
+      throw new Error(`Duplicate source category ID: ${source}`);
+    }
+
+    seenSourceIds.add(source);
+    sourcePriority.push(source);
+  }
 
   if (sourcePriority.length === 0) {
     throw new Error("At least one source category ID is required");
   }
 
-  const duplicates = sourcePriority.filter((source, index) => sourcePriority.indexOf(source) !== index);
-  if (duplicates.length > 0) {
-    throw new Error(`Duplicate source category ID: ${duplicates[0]}`);
-  }
-
   return sourcePriority;
 }
 
-async function readMissingSourceSnapshots(input: {
+async function readSourceSnapshots(input: {
   readonly client: Pick<BudgetClient, "getCategoryMonth">;
   readonly budgetId: string;
   readonly month: BudgetMonth;
@@ -105,8 +108,8 @@ async function readMissingSourceSnapshots(input: {
   readonly knownSnapshots: readonly CarryoverCategorySnapshot[];
   readonly categoryNames: ReadonlyMap<string, string>;
 }): Promise<readonly CarryoverCategorySnapshot[]> {
-  const knownById = new Map(input.knownSnapshots.map((snapshot) => [snapshot.categoryId, snapshot] as const));
-  const missingSourceIds = input.sourcePriority.filter((categoryId) => !knownById.has(categoryId));
+  const snapshotsById = new Map(input.knownSnapshots.map((snapshot) => [snapshot.categoryId, snapshot] as const));
+  const missingSourceIds = input.sourcePriority.filter((categoryId) => !snapshotsById.has(categoryId));
   const missingSourceSnapshots = await readCategorySnapshots({
     client: input.client,
     budgetId: input.budgetId,
@@ -114,10 +117,13 @@ async function readMissingSourceSnapshots(input: {
     categoryIds: missingSourceIds,
     categoryNames: input.categoryNames,
   });
-  const allSnapshots = [...input.knownSnapshots, ...missingSourceSnapshots];
+
+  for (const snapshot of missingSourceSnapshots) {
+    snapshotsById.set(snapshot.categoryId, snapshot);
+  }
 
   return input.sourcePriority.map((categoryId) => {
-    const snapshot = allSnapshots.find((candidate) => candidate.categoryId === categoryId);
+    const snapshot = snapshotsById.get(categoryId);
     if (!snapshot) {
       throw new Error(`Missing source category snapshot for ${categoryId}`);
     }

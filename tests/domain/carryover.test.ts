@@ -118,6 +118,33 @@ describe("carryover planning", () => {
     );
   });
 
+  it("carries source balances forward across multiple negative categories", () => {
+    const plan = planCarryover({
+      budgetId: "budget-1",
+      closingMonth: parseBudgetMonth("2026-06"),
+      reversalMonth: parseBudgetMonth("2026-07"),
+      sourcePriority: ["source-1", "source-2"],
+      negativeCategories: [snapshot("negative-1", -50_000, 0), snapshot("negative-2", -30_000, 0)],
+      sources: [snapshot("source-1", 60_000, 60_000), snapshot("source-2", 50_000, 50_000)],
+      reversalSnapshots: [
+        snapshot("source-1", 0, 0),
+        snapshot("source-2", 0, 0),
+        snapshot("negative-1", 0, 0),
+        snapshot("negative-2", 0, 0),
+      ],
+    });
+
+    expect(plan.items.map((item) => item.allocations)).toEqual([
+      [{ sourceCategoryId: "source-1", amount: 50_000 }],
+      [
+        { sourceCategoryId: "source-1", amount: 10_000 },
+        { sourceCategoryId: "source-2", amount: 20_000 },
+      ],
+    ]);
+    expect(plan.totalCarryoverAmount).toBe(80_000);
+    expect(plan.totalUncoveredAmount).toBe(0);
+  });
+
   it("reports uncovered categories when no source has positive available balance", () => {
     const plan = planCarryover({
       budgetId: "budget-1",
