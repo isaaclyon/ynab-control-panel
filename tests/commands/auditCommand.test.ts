@@ -30,7 +30,9 @@ describe("audit command", () => {
       ruleId: "transfer-1",
     } satisfies OperationAuditEntryFilter);
     expect(write).toHaveBeenCalledWith(expect.stringContaining("pending-recovery: transfer-1"));
-    expect(write).toHaveBeenCalledWith(expect.stringContaining("source source budgeted: $100.00 -> $50.00 (-$50.00)"));
+    expect(write).toHaveBeenCalledWith(
+      expect.stringContaining("source source (Savings) budgeted: $100.00 -> $50.00 (-$50.00)"),
+    );
   });
 
   it("prints an empty status message when no pending recovery entries match", async () => {
@@ -130,6 +132,7 @@ function scanFixture(): OperationAuditScan {
           updates: [
             {
               categoryId: "source",
+              categoryName: "Savings",
               budgetedBefore: milliunits(100_000),
               budgetedAfter: milliunits(50_000),
               delta: milliunits(-50_000),

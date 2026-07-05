@@ -2,8 +2,8 @@ import { JsonlBudgetOperationAuditLog, type BudgetOperationAuditLog } from "../a
 import type { AppEnv } from "../config/env.js";
 import { loadRulesConfig, type RulesConfig } from "../config/rules.js";
 import { currentBudgetMonth, parseBudgetMonth, type BudgetMonth } from "../domain/month.js";
-import { formatBudgetRuleRunResults, runBudgetRules } from "../jobs/runBudgetRules.js";
-import type { BudgetClient } from "../ynab/budgetClient.js";
+import { formatBudgetRuleRunResults, runBudgetRules, type CategoryNameLookup } from "../jobs/runBudgetRules.js";
+import type { BudgetClient, YnabCatalogClient } from "../ynab/budgetClient.js";
 import { YnabBudgetClient } from "../ynab/ynabBudgetClient.js";
 
 export type RunRulesOptions = {
@@ -36,6 +36,7 @@ export async function runRulesCommand(input: {
   const month = parseRequestedMonth(input.options.month, dependencies.currentBudgetMonth);
   const config = await dependencies.loadRulesConfig(input.options.rules ?? input.env.rulesFile);
   const budgetClient = dependencies.createBudgetClient(input.env.ynabAccessToken);
+  const categoryNameLookup = await loadCategoryNameLookup({ config, budgetClient });
   const auditLog = dependencies.createAuditLog(input.env.auditLogFile);
   const results = await runBudgetRules({
     config,
@@ -43,11 +44,55 @@ export async function runRulesCommand(input: {
     dryRun: !input.options.apply,
     budgetClient,
     auditLog,
+    ...(categoryNameLookup ? { categoryNameLookup } : {}),
   });
 
-  (input.stdout ?? process.stdout).write(`${formatBudgetRuleRunResults(results)}\n`);
+  (input.stdout ?? process.stdout).write(
+    `${formatBudgetRuleRunResults(results, { totalRulesConsidered: config.rules.length })}\n`,
+  );
 }
 
 function parseRequestedMonth(month: string | undefined, getCurrentBudgetMonth: () => BudgetMonth): BudgetMonth {
   return month ? parseBudgetMonth(month) : getCurrentBudgetMonth();
+}
+
+async function loadCategoryNameLookup(input: {
+  readonly config: RulesConfig;
+  readonly budgetClient: BudgetClient;
+}): Promise<CategoryNameLookup | undefined> {
+  if (!canListCategories(input.budgetClient)) {
+    return undefined;
+  }
+
+  const catalogClient = input.budgetClient;
+  const budgetIds = [...new Set(input.config.rules.filter((rule) => rule.enabled).map((rule) => rule.budgetId))];
+  const categoriesByBudget = await Promise.all(
+    budgetIds.map(async (budgetId) => {
+      try {
+        return {
+          budgetId,
+          categories: await catalogClient.listCategories({ budgetId }),
+        };
+      } catch {
+        return { budgetId, categories: [] };
+      }
+    }),
+  );
+  const categoryNames = new Map<string, string>();
+
+  for (const budget of categoriesByBudget) {
+    for (const category of budget.categories) {
+      categoryNames.set(categoryKey({ budgetId: budget.budgetId, categoryId: category.id }), category.name);
+    }
+  }
+
+  return ({ budgetId, categoryId }) => categoryNames.get(categoryKey({ budgetId, categoryId }));
+}
+
+function canListCategories(client: BudgetClient): client is BudgetClient & YnabCatalogClient {
+  return typeof (client as { readonly listCategories?: unknown }).listCategories === "function";
+}
+
+function categoryKey(input: { readonly budgetId: string; readonly categoryId: string }): string {
+  return `${input.budgetId}\u0000${input.categoryId}`;
 }

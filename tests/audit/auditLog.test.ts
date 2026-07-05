@@ -156,6 +156,30 @@ describe("JSONL top-up audit log", () => {
     });
   });
 
+  it("preserves category display names from persisted generic operation claims", async () => {
+    const path = join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl");
+    const month = parseBudgetMonth("2026-07");
+    const claim = genericClaim({ ruleId: "transfer-1", budgetId: "budget-1", month });
+    await writeFile(
+      path,
+      `${JSON.stringify({
+        ...claim,
+        operation: {
+          ...claim.operation,
+          updates: claim.operation.updates.map((update) =>
+            update.categoryId === "source" ? { ...update, categoryName: "Savings" } : update,
+          ),
+        },
+      })}\n`,
+      "utf8",
+    );
+    const log = new JsonlTopUpAuditLog(path);
+
+    const scan = await log.scanOperationAuditEntries({ ruleId: "transfer-1", budgetId: "budget-1", month });
+
+    expect(scan.entries[0]?.operation?.updates[0]).toMatchObject({ categoryId: "source", categoryName: "Savings" });
+  });
+
   it("groups audit records so applied wins over claimed while keeping claim details", async () => {
     const log = new JsonlTopUpAuditLog(join(await mkdtemp(join(tmpdir(), "ynab-audit-")), "audit.jsonl"));
     const month = parseBudgetMonth("2026-07");

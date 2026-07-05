@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAuditEnv, parseEnv } from "../../src/config/env.js";
+import { parseAuditEnv, parseEnv, parseRulesEnv } from "../../src/config/env.js";
 
 describe("env parsing", () => {
   it("parses required secrets and default file locations", () => {
@@ -19,5 +19,10 @@ describe("env parsing", () => {
     expect(parseAuditEnv({ YNAB_AUDIT_LOG_FILE: "custom-audit.jsonl" })).toEqual({
       auditLogFile: "custom-audit.jsonl",
     });
+  });
+
+  it("parses rules-only env without requiring a YNAB access token", () => {
+    expect(parseRulesEnv({})).toEqual({ rulesFile: "config/rules.json" });
+    expect(parseRulesEnv({ YNAB_RULES_FILE: "custom-rules.json" })).toEqual({ rulesFile: "custom-rules.json" });
   });
 });
