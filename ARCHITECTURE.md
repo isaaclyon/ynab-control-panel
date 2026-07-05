@@ -24,7 +24,7 @@ dry-run output or YNAB category budget updates
 - Important boundary: dry-run is the default; mutation requires `--apply`.
 - Read-only `list` helpers may expose full local YNAB names and IDs for rules configuration, but never call mutating adapter operations.
 - Local `rules` inspection commands validate, list, and explain rules JSON without requiring a YNAB token or constructing a YNAB client.
-- `run rules` and `run scheduled` execute all enabled budget rules by default and can be narrowed to one configured rule with `--only <ruleId>`. `run top-up` remains a compatibility alias for the same rules runner.
+- `run rules` and `run scheduled` execute all enabled budget rules by default and can be narrowed to one configured rule with `--only <ruleId>` or one YNAB budget with `--budget <budgetId>`. `run top-up` remains a compatibility alias for the same rules runner.
 - Rule execution output is text-first: detailed per-operation lines are followed by a concise summary block for human review and cron/systemd logs.
 - Run and audit commands also support opt-in structured JSON output; this is a presentation choice and does not change planning, mutation, or audit semantics.
 - Run output enriches category IDs with YNAB category names from read-only catalog data before formatting and before writing generic operation audit claims.

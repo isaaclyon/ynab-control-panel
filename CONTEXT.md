@@ -34,6 +34,8 @@
 
 **Single-rule execution filter**: An opt-in run command mode selected with `--only <ruleId>`. It narrows a run to one configured rule before planning, YNAB category reads, category-name lookup, audit checks, or mutations.
 
+**Budget execution filter**: An opt-in run command mode selected with `--budget <budgetId>`. It narrows a run to configured rules for one YNAB budget before planning, YNAB category reads, category-name lookup, audit checks, or mutations.
+
 **Scheduled-run health check**: A read-only command that verifies the configured scheduled run can parse its environment and rules, write beside the audit log path, connect to YNAB, and read enabled rule categories without mutating YNAB.
 
 **Rule execution summary**: A concise text block printed after detailed `run rules` / `run scheduled` operation output. It counts rules considered, dry-run planned operations, applied operations, already-applied skips, no-op operations, pending-recovery operations, disabled rules skipped before planning, and the total dollars planned/applied in the current run.
@@ -64,3 +66,4 @@
 - Rules inspection commands stop at config parsing and formatting; they do not plan operations because planning depends on current YNAB category month snapshots.
 - JSON output does not change command behavior; dry-run remains non-mutating, apply still requires `--apply`, and audit commands remain local/read-only.
 - A single-rule execution filter changes the run scope only. The selected rule still follows the same disabled, no-op, audit idempotency, dry-run, and apply behavior as it would in a full run.
+- A budget execution filter changes the run scope only. Matching rules still follow the same disabled, no-op, audit idempotency, dry-run, and apply behavior as they would in a full run.
