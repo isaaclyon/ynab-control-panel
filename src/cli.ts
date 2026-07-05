@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { AuditLogFileNotFoundError } from "./audit/auditLog.js";
 import { parseAuditEnv, parseEnv, parseRulesEnv } from "./config/env.js";
 import { auditInspectCommand, auditStatusCommand } from "./commands/auditCommand.js";
+import { carryoverPlanCommand } from "./commands/carryoverCommand.js";
 import { checkScheduledCommand, healthCheckPassed } from "./commands/checkScheduledCommand.js";
 import { listBudgetsCommand, listCategoriesCommand } from "./commands/listYnabCommand.js";
 import { runRulesCommand } from "./commands/runRulesCommand.js";
@@ -18,6 +19,18 @@ const list = program.command("list").description("List YNAB IDs for local rules 
 const audit = program.command("audit").description("Inspect local audit history; read-only");
 const check = program.command("check").description("Run read-only operational checks");
 const rules = program.command("rules").description("Inspect local rules configuration without contacting YNAB");
+const carryover = program.command("carryover").description("Preview end-of-month carryover budget adjustments");
+
+carryover
+  .command("plan")
+  .description("Dry-run a closing-month negative-balance carryover and next-month mirror reversal")
+  .requiredOption("--budget <budgetId>", "YNAB budget ID")
+  .requiredOption("--month <yyyy-mm>", "closing budget month with negative categories")
+  .requiredOption("--sources <categoryIds>", "comma-separated positive source category IDs in priority order")
+  .option("--json", "print structured JSON instead of text", false)
+  .action(async (options: { budget: string; month: string; sources: string; json?: boolean }) => {
+    await carryoverPlanCommand({ env: parseEnv(process.env), options });
+  });
 
 check
   .command("scheduled")
