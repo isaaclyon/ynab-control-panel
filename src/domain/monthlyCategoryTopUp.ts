@@ -6,6 +6,7 @@ import type { PlannedBudgetOperation } from "./budgetOperation.js";
 export type MonthlyCategoryTopUpRule = {
   readonly id: string;
   readonly type: "monthly-category-top-up";
+  readonly description?: string | undefined;
   readonly enabled: boolean;
   readonly budgetId: string;
   readonly categoryId: string;
@@ -61,6 +62,7 @@ export function planMonthlyCategoryTopUpOperation(input: {
   return {
     ruleId: plan.ruleId,
     ruleType: input.rule.type,
+    ...(input.rule.description ? { description: input.rule.description } : {}),
     budgetId: plan.budgetId,
     month: plan.month,
     summary: `assign ${formatMilliunits(plan.assignmentAmount)} to ${plan.categoryId} toward ${formatMilliunits(plan.targetBalance)} target`,

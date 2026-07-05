@@ -3,7 +3,9 @@ import {
   auditInspectCommand,
   auditStatusCommand,
   formatAuditInspect,
+  formatAuditInspectJson,
   formatAuditStatus,
+  formatAuditStatusJson,
 } from "../../src/commands/auditCommand.js";
 import { parseBudgetMonth } from "../../src/domain/month.js";
 import { milliunits } from "../../src/domain/money.js";
@@ -30,6 +32,7 @@ describe("audit command", () => {
       ruleId: "transfer-1",
     } satisfies OperationAuditEntryFilter);
     expect(write).toHaveBeenCalledWith(expect.stringContaining("pending-recovery: transfer-1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("description: Sweep dining leftovers"));
     expect(write).toHaveBeenCalledWith(
       expect.stringContaining("source source (Savings) budgeted: $100.00 -> $50.00 (-$50.00)"),
     );
@@ -48,6 +51,26 @@ describe("audit command", () => {
     });
 
     expect(write).toHaveBeenCalledWith("No pending recovery operations found.\n");
+  });
+
+  it("prints pending recovery status as JSON when requested", async () => {
+    const write = vi.fn();
+
+    await auditStatusCommand({
+      env: { auditLogFile: "audit.jsonl" },
+      options: { json: true },
+      stdout: { write },
+      dependencies: { createAuditLogReader: () => ({ scanOperationAuditEntries: async () => scanFixture() }) },
+    });
+
+    const output = JSON.parse(write.mock.calls[0]?.[0] as string) as OperationAuditScan;
+    expect(output.entries[0]).toMatchObject({
+      key: { ruleId: "transfer-1", budgetId: "budget-1", month: "2026-07" },
+      state: "claimed",
+      operation: { description: "Sweep dining leftovers" },
+    });
+    expect(output.entries[0]?.operation?.updates[0]).toMatchObject({ categoryName: "Savings" });
+    expect(output.ignoredLineCount).toBe(0);
   });
 
   it("inspects an exact audit key and reports none when missing", async () => {
@@ -74,6 +97,24 @@ describe("audit command", () => {
         "  no audit records found for this budget/rule/month",
       ].join("\n")}\n`,
     );
+  });
+
+  it("prints inspect output as JSON when requested", async () => {
+    const write = vi.fn();
+    const scanOperationAuditEntries = vi.fn().mockResolvedValue({ entries: [], ignoredLineCount: 0 });
+
+    await auditInspectCommand({
+      env: { auditLogFile: "audit.jsonl" },
+      options: { budget: "budget-1", rule: "transfer-1", month: "2026-07", json: true },
+      stdout: { write },
+      dependencies: { createAuditLogReader: () => ({ scanOperationAuditEntries }) },
+    });
+
+    expect(JSON.parse(write.mock.calls[0]?.[0] as string)).toEqual({
+      key: { budgetId: "budget-1", ruleId: "transfer-1", month: "2026-07" },
+      entry: null,
+      ignoredLineCount: 0,
+    });
   });
 
   it("formats applied entries without claim payload honestly", () => {
@@ -109,6 +150,19 @@ describe("audit command", () => {
     expect(stdout).toHaveBeenCalledWith("No pending recovery operations found.\n");
     expect(stderr).toHaveBeenCalledWith("Warning: 1 audit log line could not be parsed and was ignored.\n");
   });
+
+  it("formats JSON without text-only messages", () => {
+    expect(JSON.parse(formatAuditStatusJson(scanFixture())).entries).toHaveLength(1);
+    expect(
+      JSON.parse(
+        formatAuditInspectJson({
+          key: { ruleId: "missing", budgetId: "budget-1", month: parseBudgetMonth("2026-07") },
+          entry: undefined,
+          ignoredLineCount: 0,
+        }),
+      ),
+    ).toMatchObject({ entry: null });
+  });
 });
 
 function scanFixture(): OperationAuditScan {
@@ -125,6 +179,7 @@ function scanFixture(): OperationAuditScan {
         operation: {
           ruleId: "transfer-1",
           ruleType: "category-available-transfer",
+          description: "Sweep dining leftovers",
           budgetId: "budget-1",
           month,
           summary: "move $50.00 from source to destination",

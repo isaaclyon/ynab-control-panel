@@ -3,6 +3,7 @@
     {
       "id": "emergency-fund-top-up",
       "type": "monthly-category-top-up",
+      "description": "Build emergency fund to target",
       "budgetId": "replace-with-budget-id",
       "categoryId": "replace-with-category-id",
       "monthlyAmount": "250.00",
@@ -11,6 +12,7 @@
     {
       "id": "sweep-dining-extra",
       "type": "category-available-transfer",
+      "description": "Sweep extra dining money to vacation",
       "enabled": false,
       "budgetId": "replace-with-budget-id",
       "fromCategoryId": "replace-with-source-category-id",

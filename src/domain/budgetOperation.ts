@@ -16,6 +16,7 @@ export type CategoryBudgetUpdate = {
 export type PlannedBudgetOperation = {
   readonly ruleId: string;
   readonly ruleType: BudgetRule["type"];
+  readonly description?: string | undefined;
   readonly budgetId: string;
   readonly month: BudgetMonth;
   readonly summary: string;

@@ -19,6 +19,7 @@ export type AmountPolicy = FixedAmountPolicy | PercentOfAvailableAmountPolicy;
 export type CategoryAvailableTransferRule = {
   readonly id: string;
   readonly type: "category-available-transfer";
+  readonly description?: string | undefined;
   readonly enabled: boolean;
   readonly budgetId: string;
   readonly fromCategoryId: string;
@@ -42,6 +43,7 @@ export function planCategoryAvailableTransfer(input: {
   return {
     ruleId: input.rule.id,
     ruleType: input.rule.type,
+    ...(input.rule.description ? { description: input.rule.description } : {}),
     budgetId: input.rule.budgetId,
     month: input.month,
     summary: `move ${formatMilliunits(transferAmount)} from ${input.rule.fromCategoryId} to ${input.rule.toCategoryId}`,

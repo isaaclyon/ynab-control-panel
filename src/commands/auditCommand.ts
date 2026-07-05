@@ -15,6 +15,7 @@ export type AuditStatusOptions = {
   readonly budget?: string;
   readonly rule?: string;
   readonly auditLog?: string;
+  readonly json?: boolean;
 };
 
 export type AuditInspectOptions = {
@@ -22,6 +23,7 @@ export type AuditInspectOptions = {
   readonly budget: string;
   readonly rule: string;
   readonly auditLog?: string;
+  readonly json?: boolean;
 };
 
 type AuditLogReader = {
@@ -47,7 +49,9 @@ export async function auditStatusCommand(input: {
   const reader = dependencies.createAuditLogReader(input.options.auditLog ?? input.env.auditLogFile);
   const scan = await reader.scanOperationAuditEntries(statusFilter(input.options));
 
-  (input.stdout ?? process.stdout).write(`${formatAuditStatus(scan)}\n`);
+  (input.stdout ?? process.stdout).write(
+    `${input.options.json ? formatAuditStatusJson(scan) : formatAuditStatus(scan)}\n`,
+  );
   writeIgnoredLineWarning(input.stderr ?? process.stderr, scan.ignoredLineCount);
 }
 
@@ -64,9 +68,11 @@ export async function auditInspectCommand(input: {
   const scan = await reader.scanOperationAuditEntries(key);
   const entry = scan.entries[0];
 
-  (input.stdout ?? process.stdout).write(
-    `${formatAuditInspect({ key, entry, ignoredLineCount: scan.ignoredLineCount })}\n`,
-  );
+  const output = input.options.json
+    ? formatAuditInspectJson({ key, entry, ignoredLineCount: scan.ignoredLineCount })
+    : formatAuditInspect({ key, entry, ignoredLineCount: scan.ignoredLineCount });
+
+  (input.stdout ?? process.stdout).write(`${output}\n`);
   writeIgnoredLineWarning(input.stderr ?? process.stderr, scan.ignoredLineCount);
 }
 
@@ -74,6 +80,10 @@ export function formatAuditStatus(scan: OperationAuditScan): string {
   return scan.entries.length === 0
     ? "No pending recovery operations found."
     : scan.entries.map((entry) => formatAuditEntry(entry)).join("\n\n");
+}
+
+export function formatAuditStatusJson(scan: OperationAuditScan): string {
+  return JSON.stringify(scan, null, 2);
 }
 
 export function formatAuditInspect(input: {
@@ -91,6 +101,14 @@ export function formatAuditInspect(input: {
   }
 
   return formatAuditEntry(input.entry);
+}
+
+export function formatAuditInspectJson(input: {
+  readonly key: OperationAuditKey;
+  readonly entry: OperationAuditEntry | undefined;
+  readonly ignoredLineCount: number;
+}): string {
+  return JSON.stringify({ ...input, entry: input.entry ?? null }, null, 2);
 }
 
 function formatAuditEntry(entry: OperationAuditEntry): string {
@@ -113,6 +131,7 @@ function formatTimestamps(entry: OperationAuditEntry): string[] {
 function formatOperationDetails(entry: OperationAuditEntry): string[] {
   if (entry.operation) {
     return [
+      ...formatDescriptionLines(entry.operation.description),
       `  ${entry.operation.summary}`,
       `  reason: ${entry.operation.reason}`,
       ...entry.operation.updates.map(
@@ -134,6 +153,10 @@ function formatOperationDetails(entry: OperationAuditEntry): string[] {
   return ["  operation detail unavailable; no matching claim payload was found"];
 }
 
+function formatDescriptionLines(description: string | undefined): string[] {
+  return description ? [`  description: ${formatDisplayText(description)}`] : [];
+}
+
 function formatState(state: OperationAuditEntry["state"]): string {
   return state === "claimed" ? "pending-recovery" : "applied";
 }
@@ -151,7 +174,11 @@ function formatCategoryReference(update: CategoryBudgetUpdate): string {
 }
 
 function formatCategoryName(name: string): string {
-  return name.replace(/[\t\n\r]+/g, " ");
+  return formatDisplayText(name);
+}
+
+function formatDisplayText(value: string): string {
+  return value.replace(/[\t\n\r]+/g, " ");
 }
 
 export function formatIgnoredLineWarning(ignoredLineCount: number): string | undefined {

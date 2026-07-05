@@ -407,6 +407,7 @@ function isPlannedBudgetOperation(input: unknown): input is PlannedBudgetOperati
   return (
     typeof candidate["ruleId"] === "string" &&
     typeof candidate["ruleType"] === "string" &&
+    (candidate["description"] === undefined || typeof candidate["description"] === "string") &&
     typeof candidate["budgetId"] === "string" &&
     typeof candidate["month"] === "string" &&
     typeof candidate["summary"] === "string" &&

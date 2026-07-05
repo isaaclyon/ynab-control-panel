@@ -11,6 +11,7 @@ describe("rules config parsing", () => {
         {
           id: "rule-1",
           type: "monthly-category-top-up",
+          description: "  Emergency fund target  ",
           budgetId: "budget-1",
           categoryId: "category-1",
           monthlyAmount: "250.00",
@@ -26,6 +27,7 @@ describe("rules config parsing", () => {
     }
 
     expect(rule.enabled).toBe(true);
+    expect(rule.description).toBe("Emergency fund target");
     expect(rule.monthlyAmount).toBe(250_000);
     expect(rule.targetBalance).toBe(1_000_000);
   });
@@ -36,6 +38,7 @@ describe("rules config parsing", () => {
         {
           id: "sweep-dining-extra",
           type: "category-available-transfer",
+          description: "Sweep dining leftovers",
           enabled: false,
           budgetId: "budget-1",
           fromCategoryId: "dining",
@@ -53,6 +56,7 @@ describe("rules config parsing", () => {
     }
 
     expect(rule.enabled).toBe(false);
+    expect(rule.description).toBe("Sweep dining leftovers");
     expect(rule.amount).toEqual({ type: "percent-of-available", percent: 50, max: 100_000 });
     expect(rule.leaveAvailable).toBe(25_000);
   });
@@ -72,6 +76,24 @@ describe("rules config parsing", () => {
         ],
       }),
     ).toThrow();
+  });
+
+  it("rejects blank rule descriptions", () => {
+    expect(() =>
+      parseRulesConfig({
+        rules: [
+          {
+            id: "rule-1",
+            type: "monthly-category-top-up",
+            description: "  ",
+            budgetId: "budget-1",
+            categoryId: "category-1",
+            monthlyAmount: "1.00",
+            targetBalance: "1.00",
+          },
+        ],
+      }),
+    ).toThrow(/description cannot be blank/);
   });
 
   it("rejects duplicate rule ids and transfer rules with identical source/destination categories", () => {

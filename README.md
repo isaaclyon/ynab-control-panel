@@ -11,6 +11,8 @@ Backend-first TypeScript utilities for safe YNAB automation. The CLI runs typed 
 - Plan monthly category top-ups.
 - Plan category available transfers that move available money between categories by updating category `budgeted` amounts.
 - Preview one user-visible planned operation per rule, even when that operation contains multiple YNAB updates.
+- Filter run commands to one rule with `--only <ruleId>` for dry-run-first testing and debugging.
+- Print text output by default and structured JSON with `--json` for run and audit commands.
 - Apply changes only with `--apply`.
 - Write an operation audit log so scheduled jobs are idempotent per budget/rule/month and claim-only runs are visible for manual recovery.
 - Check scheduled-run readiness without mutating YNAB.
@@ -63,7 +65,21 @@ Apply all enabled budget rules:
 npm run dev -- run rules --month 2026-07 --apply
 ```
 
+Run a single configured rule, dry-run first:
+
+```bash
+npm run dev -- run rules --month 2026-07 --only <ruleId>
+npm run dev -- run rules --month 2026-07 --only <ruleId> --apply
+```
+
 `run rules`, `run top-up`, and `run scheduled` preserve detailed per-rule output and then print a summary block with rules considered, planned/applied operations, skipped/already-applied operations, no-ops, pending recovery, disabled rules, and the total dollars moved or budgeted in the current run. Each result includes a reason line explaining planned movement, no-ops, or disabled-rule skips. Category names are shown beside category IDs when the YNAB catalog lookup can resolve them; rules and audit identity remain ID-based.
+
+Use `--json` on `run rules`, `run top-up`, or `run scheduled` to print structured results and the same summary for scripts or future UI surfaces:
+
+```bash
+npm run dev -- run rules --month 2026-07 --json
+npm run dev -- run scheduled --apply --json
+```
 
 `run top-up` remains a compatibility alias for the generic rules runner:
 
@@ -99,6 +115,13 @@ npm run dev -- audit inspect --budget <budgetId> --rule <ruleId> --month 2026-07
 
 Use `--audit-log <path>` on either audit command to inspect a non-default JSONL file. Audit commands fail if the selected log file does not exist, so cron/systemd path mistakes do not look like an empty recovery queue. Audit output is local history only; compare with current YNAB before manually retrying a pending recovery operation.
 
+Use `--json` on either audit command for structured local audit output:
+
+```bash
+npm run dev -- audit status --json
+npm run dev -- audit inspect --budget <budgetId> --rule <ruleId> --month 2026-07 --json
+```
+
 ## Rules JSON
 
 Monthly category top-up:
@@ -107,6 +130,7 @@ Monthly category top-up:
 {
   "id": "emergency-fund-top-up",
   "type": "monthly-category-top-up",
+  "description": "Build emergency fund to target",
   "budgetId": "budget-id",
   "categoryId": "category-id",
   "monthlyAmount": "250.00",
@@ -120,6 +144,7 @@ Category available transfer:
 {
   "id": "sweep-dining-extra",
   "type": "category-available-transfer",
+  "description": "Sweep extra dining money to vacation",
   "budgetId": "budget-id",
   "fromCategoryId": "dining-id",
   "toCategoryId": "vacation-id",
@@ -131,6 +156,8 @@ Category available transfer:
 Transfer rules decrease the source category's `budgeted` amount and increase the destination category's `budgeted` amount. The source `budgeted` amount may become negative when moving carried-over available money, but the rule will not move more than the source available balance after `leaveAvailable`.
 
 Set `enabled: false` on any rule to keep it in config without reading, writing, or auditing it.
+
+Set optional `description` on any rule for human-readable output and audit history. Descriptions are display metadata only; rule IDs remain the durable identity for audit keys and YNAB mutations.
 
 ## Verification
 

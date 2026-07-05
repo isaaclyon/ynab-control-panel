@@ -12,7 +12,9 @@
 
 **Milliunits**: YNAB's integer money unit. `$1.00` is `1000` milliunits.
 
-**Budget rule**: A typed automation rule in rules JSON. Every rule has a shared envelope (`id`, `type`, `budgetId`, optional `enabled`) and rule-specific fields.
+**Budget rule**: A typed automation rule in rules JSON. Every rule has a shared envelope (`id`, `type`, `budgetId`, optional `enabled`, optional `description`) and rule-specific fields.
+
+**Rule description**: Optional human-readable display metadata for a budget rule. It is printed in command output and preserved in planned operation audit payloads, but it does not affect rule identity, budgeting math, audit idempotency, or YNAB mutations.
 
 **Planned budget operation**: The user-visible result of planning one enabled budget rule for one budget month. One planned operation may contain one or many category budget updates.
 
@@ -30,6 +32,8 @@
 
 **Apply mode**: A command mode enabled by `--apply` that mutates YNAB and records applied operations.
 
+**Single-rule execution filter**: An opt-in run command mode selected with `--only <ruleId>`. It narrows a run to one configured rule before planning, YNAB category reads, category-name lookup, audit checks, or mutations.
+
 **Scheduled-run health check**: A read-only command that verifies the configured scheduled run can parse its environment and rules, write beside the audit log path, connect to YNAB, and read enabled rule categories without mutating YNAB.
 
 **Rule execution summary**: A concise text block printed after detailed `run rules` / `run scheduled` operation output. It counts rules considered, dry-run planned operations, applied operations, already-applied skips, no-op operations, pending-recovery operations, disabled rules skipped before planning, and the total dollars planned/applied in the current run.
@@ -39,6 +43,8 @@
 **Run reason**: A human-readable explanation printed with each run result. It translates rule planning reason codes into why money will move or why a rule was no-op/skipped, such as target already met, source available at the leaveAvailable floor, amount policy rounded to zero, or disabled rule.
 
 **Rules inspection command**: A local-only command under `rules` that validates, lists, or explains rules JSON without requiring a YNAB token and without reading or mutating YNAB.
+
+**Structured JSON output**: An opt-in `--json` mode for run and audit commands. Text remains the default for humans and cron logs; JSON exposes the same operation results, audit entries, and summary fields for scripts and future UI surfaces.
 
 **Audit log**: Append-only local records of claimed and applied budget operations. JSONL audit records let scheduled CLI runs avoid applying the same budget/rule/month twice and let read-only audit commands surface claim-only runs for manual recovery.
 
@@ -53,5 +59,8 @@
 - The scheduled-run health check is operational readiness evidence only; it does not reserve audit state or prove future YNAB balances will produce a non-no-op operation.
 - Rule execution summaries count transfers by positive child update deltas so moving money between categories is reported once, not once per source and destination update.
 - Category names are display metadata. Category IDs remain the durable identity for rules, audit idempotency, and YNAB mutations.
+- Rule descriptions are display metadata. Rule IDs remain the durable identity for audit idempotency and command targeting.
 - Disabled rules are reported as skipped run results without reading YNAB, writing audit records, or mutating YNAB.
 - Rules inspection commands stop at config parsing and formatting; they do not plan operations because planning depends on current YNAB category month snapshots.
+- JSON output does not change command behavior; dry-run remains non-mutating, apply still requires `--apply`, and audit commands remain local/read-only.
+- A single-rule execution filter changes the run scope only. The selected rule still follows the same disabled, no-op, audit idempotency, dry-run, and apply behavior as it would in a full run.
