@@ -14,9 +14,9 @@ describe("rules config parsing", () => {
           budgetId: "budget-1",
           categoryId: "category-1",
           monthlyAmount: "250.00",
-          targetBalance: "1000.00"
-        }
-      ]
+          targetBalance: "1000.00",
+        },
+      ],
     });
 
     expect(config.rules[0]?.monthlyAmount).toBe(250_000);
@@ -33,10 +33,10 @@ describe("rules config parsing", () => {
             budgetId: "budget-1",
             categoryId: "category-1",
             monthlyAmount: "0",
-            targetBalance: "-1"
-          }
-        ]
-      })
+            targetBalance: "-1",
+          },
+        ],
+      }),
     ).toThrow();
   });
 
@@ -52,15 +52,15 @@ describe("rules config parsing", () => {
             budgetId: "budget-1",
             categoryId: "category-1",
             monthlyAmount: "250.00",
-            targetBalance: "1000.00"
-          }
-        ]
+            targetBalance: "1000.00",
+          },
+        ],
       }),
-      "utf8"
+      "utf8",
     );
 
     await expect(loadRulesConfig(path)).resolves.toMatchObject({
-      rules: [{ monthlyAmount: 250_000, targetBalance: 1_000_000 }]
+      rules: [{ monthlyAmount: 250_000, targetBalance: 1_000_000 }],
     });
   });
 });

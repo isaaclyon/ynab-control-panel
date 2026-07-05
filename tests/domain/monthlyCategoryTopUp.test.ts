@@ -9,7 +9,7 @@ const rule: MonthlyCategoryTopUpRule = {
   budgetId: "budget-1",
   categoryId: "category-1",
   monthlyAmount: milliunits(50_000),
-  targetBalance: milliunits(200_000)
+  targetBalance: milliunits(200_000),
 };
 
 describe("monthly category top-up planning", () => {
@@ -20,8 +20,8 @@ describe("monthly category top-up planning", () => {
       snapshot: {
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
-      }
+        balance: milliunits(100_000),
+      },
     });
 
     expect(plan.assignmentAmount).toBe(50_000);
@@ -36,8 +36,8 @@ describe("monthly category top-up planning", () => {
       snapshot: {
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(180_000)
-      }
+        balance: milliunits(180_000),
+      },
     });
 
     expect(plan.assignmentAmount).toBe(20_000);
@@ -51,8 +51,8 @@ describe("monthly category top-up planning", () => {
       snapshot: {
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(250_000)
-      }
+        balance: milliunits(250_000),
+      },
     });
 
     expect(plan.assignmentAmount).toBe(0);

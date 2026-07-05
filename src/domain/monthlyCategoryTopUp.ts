@@ -48,6 +48,6 @@ export function planMonthlyCategoryTopUp(input: {
     budgetedAfter,
     balanceBefore: input.snapshot.balance,
     targetBalance: input.rule.targetBalance,
-    reason: assignmentAmount === 0 ? "target-already-met" : "top-up-needed"
+    reason: assignmentAmount === 0 ? "target-already-met" : "top-up-needed",
   };
 }

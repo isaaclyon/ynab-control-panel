@@ -23,7 +23,7 @@ const defaultDependencies: RunTopUpsDependencies = {
   loadRulesConfig,
   createBudgetClient: (accessToken) => new YnabBudgetClient(accessToken),
   createAuditLog: (path) => new JsonlTopUpAuditLog(path),
-  currentBudgetMonth
+  currentBudgetMonth,
 };
 
 export async function runTopUpsCommand(input: {
@@ -42,7 +42,7 @@ export async function runTopUpsCommand(input: {
     month,
     dryRun: !input.options.apply,
     budgetClient,
-    auditLog
+    auditLog,
   });
 
   (input.stdout ?? process.stdout).write(`${formatTopUpRunResults(results)}\n`);

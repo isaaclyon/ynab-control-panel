@@ -3,7 +3,7 @@ import type { BudgetMonth } from "../domain/month.js";
 import { milliunits } from "../domain/money.js";
 import type { BudgetClient, CategoryListItem, YnabCatalogClient } from "./budgetClient.js";
 
-type YnabApiPort = {
+export type YnabApiPort = {
   readonly plans: {
     getPlans(includeAccounts?: boolean): Promise<{
       data: {
@@ -41,7 +41,7 @@ type YnabApiPort = {
     getMonthCategoryById(
       budgetId: string,
       month: string,
-      categoryId: string
+      categoryId: string,
     ): Promise<{
       data: {
         category: {
@@ -56,7 +56,7 @@ type YnabApiPort = {
       budgetId: string,
       month: string,
       categoryId: string,
-      data: { category: { budgeted: number } }
+      data: { category: { budgeted: number } },
     ): Promise<unknown>;
   };
 };
@@ -72,7 +72,7 @@ export class YnabBudgetClient implements BudgetClient, YnabCatalogClient {
     const response = await this.api.categories.getMonthCategoryById(
       input.budgetId,
       toYnabMonthParam(input.month),
-      input.categoryId
+      input.categoryId,
     );
     const category = response.data.category;
 
@@ -83,7 +83,7 @@ export class YnabBudgetClient implements BudgetClient, YnabCatalogClient {
     return {
       budgeted: milliunits(category.budgeted),
       activity: milliunits(category.activity),
-      balance: milliunits(category.balance)
+      balance: milliunits(category.balance),
     };
   }
 
@@ -94,11 +94,13 @@ export class YnabBudgetClient implements BudgetClient, YnabCatalogClient {
     return response.data.plans.map((budget) => ({
       id: budget.id,
       name: budget.name,
-      isDefault: budget.id === defaultBudgetId
+      isDefault: budget.id === defaultBudgetId,
     }));
   }
 
-  public async listCategories(input: Parameters<YnabCatalogClient["listCategories"]>[0]): Promise<readonly CategoryListItem[]> {
+  public async listCategories(
+    input: Parameters<YnabCatalogClient["listCategories"]>[0],
+  ): Promise<readonly CategoryListItem[]> {
     const response = await this.api.categories.getCategories(input.budgetId);
 
     return response.data.category_groups.flatMap((categoryGroup) => {
@@ -113,14 +115,14 @@ export class YnabBudgetClient implements BudgetClient, YnabCatalogClient {
           name: category.name,
           categoryGroupId: category.category_group_id,
           categoryGroupName: categoryGroup.name,
-          hidden: categoryGroup.hidden || category.hidden
+          hidden: categoryGroup.hidden || category.hidden,
         }));
     });
   }
 
   public async updateCategoryBudgeted(input: Parameters<BudgetClient["updateCategoryBudgeted"]>[0]): Promise<void> {
     await this.api.categories.updateMonthCategory(input.budgetId, toYnabMonthParam(input.month), input.categoryId, {
-      category: { budgeted: input.budgeted }
+      category: { budgeted: input.budgeted },
     });
   }
 }

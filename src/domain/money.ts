@@ -32,7 +32,7 @@ export const dollarAmountSchema = z.string().transform((value, context) => {
   } catch (error) {
     context.addIssue({
       code: "custom",
-      message: error instanceof Error ? error.message : "Invalid dollar amount"
+      message: error instanceof Error ? error.message : "Invalid dollar amount",
     });
 
     return z.NEVER;

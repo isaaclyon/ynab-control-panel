@@ -23,7 +23,7 @@ export const budgetMonthSchema = z.string().transform((value, context) => {
   } catch (error) {
     context.addIssue({
       code: "custom",
-      message: error instanceof Error ? error.message : "Invalid budget month"
+      message: error instanceof Error ? error.message : "Invalid budget month",
     });
 
     return z.NEVER;

@@ -59,10 +59,14 @@ npm run dev -- run scheduled --apply
 
 ```bash
 npm run typecheck
+npm run lint
+npm run format:check
 npm test
 npm run test:coverage
 npm run build
 ```
+
+Use `npm run check` to run typechecking, linting, and formatting checks together. Use `npm run format` to apply Biome formatting.
 
 Coverage is expected to stay at or above 90% for statements, branches, functions, and lines.
 

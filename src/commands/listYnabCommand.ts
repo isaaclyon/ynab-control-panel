@@ -11,7 +11,7 @@ type ListYnabDependencies = {
 };
 
 const defaultDependencies: ListYnabDependencies = {
-  createCatalogClient: (accessToken) => new YnabBudgetClient(accessToken)
+  createCatalogClient: (accessToken) => new YnabBudgetClient(accessToken),
 };
 
 const fullLocalOutputNotice =
@@ -46,7 +46,7 @@ export function formatBudgetList(budgets: readonly BudgetListItem[]): string {
   return [
     fullLocalOutputNotice,
     "budgetId\tname\tdefault",
-    ...budgets.map((budget) => [budget.id, budget.name, budget.isDefault ? "yes" : ""].map(formatCell).join("\t"))
+    ...budgets.map((budget) => [budget.id, budget.name, budget.isDefault ? "yes" : ""].map(formatCell).join("\t")),
   ].join("\n");
 }
 
@@ -56,8 +56,10 @@ export function formatCategoryList(budgetId: string, categories: readonly Catego
     `Categories for budgetId: ${budgetId}`,
     "categoryId\tcategoryGroup\tcategory\tflags",
     ...categories.map((category) =>
-      [category.id, category.categoryGroupName, category.name, category.hidden ? "hidden" : ""].map(formatCell).join("\t")
-    )
+      [category.id, category.categoryGroupName, category.name, category.hidden ? "hidden" : ""]
+        .map(formatCell)
+        .join("\t"),
+    ),
   ].join("\n");
 }
 

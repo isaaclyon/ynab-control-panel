@@ -28,9 +28,9 @@ describe("run top-ups command", () => {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
+        balance: milliunits(100_000),
       }),
-      updateCategoryBudgeted: vi.fn()
+      updateCategoryBudgeted: vi.fn(),
     };
     const loadRulesConfig = vi.fn().mockResolvedValue(configFixture());
     const createBudgetClient = vi.fn().mockReturnValue(budgetClient);
@@ -40,7 +40,7 @@ describe("run top-ups command", () => {
       env: {
         ynabAccessToken: "token",
         rulesFile: "default-rules.json",
-        auditLogFile: "audit.jsonl"
+        auditLogFile: "audit.jsonl",
       },
       options: { month: "2026-07", rules: "custom-rules.json", apply: true },
       stdout: { write },
@@ -48,8 +48,8 @@ describe("run top-ups command", () => {
         loadRulesConfig,
         createBudgetClient,
         createAuditLog,
-        currentBudgetMonth: () => parseBudgetMonth("2026-08")
-      }
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
     });
 
     expect(loadRulesConfig).toHaveBeenCalledWith("custom-rules.json");
@@ -59,7 +59,7 @@ describe("run top-ups command", () => {
       budgetId: "budget-1",
       month: "2026-07",
       categoryId: "category-1",
-      budgeted: 75_000
+      budgeted: 75_000,
     });
     expect(write).toHaveBeenCalledWith(expect.stringContaining("applied: rule-1"));
   });
@@ -70,9 +70,9 @@ describe("run top-ups command", () => {
       getCategoryMonth: vi.fn().mockResolvedValue({
         budgeted: milliunits(25_000),
         activity: milliunits(0),
-        balance: milliunits(100_000)
+        balance: milliunits(100_000),
       }),
-      updateCategoryBudgeted: vi.fn()
+      updateCategoryBudgeted: vi.fn(),
     };
     const loadRulesConfig = vi.fn().mockResolvedValue(configFixture());
 
@@ -80,7 +80,7 @@ describe("run top-ups command", () => {
       env: {
         ynabAccessToken: "token",
         rulesFile: "default-rules.json",
-        auditLogFile: "audit.jsonl"
+        auditLogFile: "audit.jsonl",
       },
       options: { apply: false },
       stdout: { write },
@@ -88,15 +88,15 @@ describe("run top-ups command", () => {
         loadRulesConfig,
         createBudgetClient: () => budgetClient,
         createAuditLog: () => new MemoryAuditLog(),
-        currentBudgetMonth: () => parseBudgetMonth("2026-08")
-      }
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
     });
 
     expect(loadRulesConfig).toHaveBeenCalledWith("default-rules.json");
     expect(budgetClient.getCategoryMonth).toHaveBeenCalledWith({
       budgetId: "budget-1",
       month: "2026-08",
-      categoryId: "category-1"
+      categoryId: "category-1",
     });
     expect(budgetClient.updateCategoryBudgeted).not.toHaveBeenCalled();
     expect(write).toHaveBeenCalledWith(expect.stringContaining("dry-run: rule-1"));
@@ -112,8 +112,8 @@ function configFixture() {
         budgetId: "budget-1",
         categoryId: "category-1",
         monthlyAmount: milliunits(50_000),
-        targetBalance: milliunits(200_000)
-      }
-    ]
+        targetBalance: milliunits(200_000),
+      },
+    ],
   };
 }

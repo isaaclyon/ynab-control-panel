@@ -3,7 +3,7 @@ import {
   formatBudgetList,
   formatCategoryList,
   listBudgetsCommand,
-  listCategoriesCommand
+  listCategoriesCommand,
 } from "../../src/commands/listYnabCommand.js";
 import type { YnabCatalogClient } from "../../src/ynab/budgetClient.js";
 
@@ -12,14 +12,14 @@ describe("list YNAB command", () => {
     const write = vi.fn();
     const client: YnabCatalogClient = {
       listBudgets: vi.fn().mockResolvedValue([{ id: "budget-1", name: "Main Budget", isDefault: true }]),
-      listCategories: vi.fn()
+      listCategories: vi.fn(),
     };
     const createCatalogClient = vi.fn().mockReturnValue(client);
 
     await listBudgetsCommand({
       env: envFixture(),
       stdout: { write },
-      dependencies: { createCatalogClient }
+      dependencies: { createCatalogClient },
     });
 
     expect(createCatalogClient).toHaveBeenCalledWith("token");
@@ -38,16 +38,16 @@ describe("list YNAB command", () => {
           name: "Rent",
           categoryGroupId: "group-1",
           categoryGroupName: "Bills",
-          hidden: false
-        }
-      ])
+          hidden: false,
+        },
+      ]),
     };
 
     await listCategoriesCommand({
       env: envFixture(),
       options: { budget: "budget-1" },
       stdout: { write },
-      dependencies: { createCatalogClient: () => client }
+      dependencies: { createCatalogClient: () => client },
     });
 
     expect(client.listBudgets).not.toHaveBeenCalled();
@@ -59,15 +59,15 @@ describe("list YNAB command", () => {
     expect(
       formatBudgetList([
         { id: "budget-1", name: "Main Budget", isDefault: true },
-        { id: "budget-2", name: "Archive\nBudget", isDefault: false }
-      ])
+        { id: "budget-2", name: "Archive\nBudget", isDefault: false },
+      ]),
     ).toBe(
       [
         "Full local output: YNAB names and IDs are not redacted so you can copy them into config/rules.json.",
         "budgetId\tname\tdefault",
         "budget-1\tMain Budget\tyes",
-        "budget-2\tArchive Budget\t"
-      ].join("\n")
+        "budget-2\tArchive Budget\t",
+      ].join("\n"),
     );
   });
 
@@ -79,24 +79,24 @@ describe("list YNAB command", () => {
           name: "Rent",
           categoryGroupId: "group-1",
           categoryGroupName: "Bills",
-          hidden: false
+          hidden: false,
         },
         {
           id: "category-2",
           name: "Emergency Fund",
           categoryGroupId: "group-2",
           categoryGroupName: "Savings\tGoals",
-          hidden: true
-        }
-      ])
+          hidden: true,
+        },
+      ]),
     ).toBe(
       [
         "Full local output: YNAB names and IDs are not redacted so you can copy them into config/rules.json.",
         "Categories for budgetId: budget-1",
         "categoryId\tcategoryGroup\tcategory\tflags",
         "category-1\tBills\tRent\t",
-        "category-2\tSavings Goals\tEmergency Fund\thidden"
-      ].join("\n")
+        "category-2\tSavings Goals\tEmergency Fund\thidden",
+      ].join("\n"),
     );
   });
 });
@@ -105,6 +105,6 @@ function envFixture() {
   return {
     ynabAccessToken: "token",
     rulesFile: "rules.json",
-    auditLogFile: "audit.jsonl"
+    auditLogFile: "audit.jsonl",
   };
 }
