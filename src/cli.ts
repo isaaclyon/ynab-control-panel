@@ -2,10 +2,12 @@
 import "dotenv/config";
 import { Command } from "commander";
 import { AuditLogFileNotFoundError } from "./audit/auditLog.js";
-import { parseAuditEnv, parseEnv } from "./config/env.js";
+import { parseAuditEnv, parseEnv, parseRulesEnv } from "./config/env.js";
 import { auditInspectCommand, auditStatusCommand } from "./commands/auditCommand.js";
+import { checkScheduledCommand, healthCheckPassed } from "./commands/checkScheduledCommand.js";
 import { listBudgetsCommand, listCategoriesCommand } from "./commands/listYnabCommand.js";
 import { runRulesCommand } from "./commands/runRulesCommand.js";
+import { rulesExplainCommand, rulesListCommand, rulesValidateCommand } from "./commands/rulesCommand.js";
 
 const program = new Command();
 
@@ -14,6 +16,20 @@ program.name("ynab-control-panel").description("Backend-first YNAB automation ut
 const run = program.command("run").description("Run YNAB automation jobs");
 const list = program.command("list").description("List YNAB IDs for local rules configuration; read-only");
 const audit = program.command("audit").description("Inspect local audit history; read-only");
+const check = program.command("check").description("Run read-only operational checks");
+const rules = program.command("rules").description("Inspect local rules configuration without contacting YNAB");
+
+check
+  .command("scheduled")
+  .description("Verify scheduled-run readiness without mutating YNAB")
+  .option("--month <yyyy-mm>", "budget month to query; defaults to the current UTC month")
+  .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
+  .action(async (options: { month?: string; rules?: string }) => {
+    const report = await checkScheduledCommand({ env: process.env, options });
+    if (!healthCheckPassed(report)) {
+      process.exitCode = 1;
+    }
+  });
 
 list
   .command("budgets")
@@ -50,6 +66,31 @@ audit
   .option("--audit-log <path>", "audit JSONL file; defaults to YNAB_AUDIT_LOG_FILE")
   .action(async (options: { month: string; budget: string; rule: string; auditLog?: string }) => {
     await auditInspectCommand({ env: parseAuditEnv(process.env), options });
+  });
+
+rules
+  .command("validate")
+  .description("Validate local rules JSON without contacting YNAB")
+  .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
+  .action(async (options: { rules?: string }) => {
+    await rulesValidateCommand({ env: parseRulesEnv(process.env), options });
+  });
+
+rules
+  .command("list")
+  .description("List configured rules without contacting YNAB")
+  .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
+  .action(async (options: { rules?: string }) => {
+    await rulesListCommand({ env: parseRulesEnv(process.env), options });
+  });
+
+rules
+  .command("explain")
+  .description("Explain one configured rule without contacting YNAB")
+  .argument("<ruleId>", "rule ID from the local rules JSON")
+  .option("--rules <path>", "rules JSON file; defaults to YNAB_RULES_FILE")
+  .action(async (ruleId: string, options: { rules?: string }) => {
+    await rulesExplainCommand({ env: parseRulesEnv(process.env), options: { ...options, ruleId } });
   });
 
 run

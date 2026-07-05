@@ -6,6 +6,7 @@ import {
   type OperationAuditScan,
 } from "../audit/auditLog.js";
 import type { AuditEnv } from "../config/env.js";
+import type { CategoryBudgetUpdate } from "../domain/budgetOperation.js";
 import { parseBudgetMonth } from "../domain/month.js";
 import { formatMilliunits, type Milliunits } from "../domain/money.js";
 
@@ -116,7 +117,7 @@ function formatOperationDetails(entry: OperationAuditEntry): string[] {
       `  reason: ${entry.operation.reason}`,
       ...entry.operation.updates.map(
         (update) =>
-          `  ${update.role ? `${update.role} ` : ""}${update.categoryId} budgeted: ${formatMilliunits(update.budgetedBefore)} -> ${formatMilliunits(update.budgetedAfter)} (${formatDelta(update.delta)})`,
+          `  ${update.role ? `${update.role} ` : ""}${formatCategoryReference(update)} budgeted: ${formatMilliunits(update.budgetedBefore)} -> ${formatMilliunits(update.budgetedAfter)} (${formatDelta(update.delta)})`,
       ),
     ];
   }
@@ -143,6 +144,14 @@ function formatDelta(delta: Milliunits): string {
   }
 
   return formatMilliunits(delta);
+}
+
+function formatCategoryReference(update: CategoryBudgetUpdate): string {
+  return update.categoryName ? `${update.categoryId} (${formatCategoryName(update.categoryName)})` : update.categoryId;
+}
+
+function formatCategoryName(name: string): string {
+  return name.replace(/[\t\n\r]+/g, " ");
 }
 
 export function formatIgnoredLineWarning(ignoredLineCount: number): string | undefined {

@@ -45,7 +45,7 @@ export function planCategoryAvailableTransfer(input: {
     budgetId: input.rule.budgetId,
     month: input.month,
     summary: `move ${formatMilliunits(transferAmount)} from ${input.rule.fromCategoryId} to ${input.rule.toCategoryId}`,
-    reason: transferAmount === 0 ? "no-movable-available" : "transfer-needed",
+    reason: transferAmount === 0 ? explainZeroTransfer({ movableAvailable, policyAmount }) : "transfer-needed",
     updates: [
       {
         categoryId: input.rule.fromCategoryId,
@@ -63,6 +63,15 @@ export function planCategoryAvailableTransfer(input: {
       },
     ],
   };
+}
+
+function explainZeroTransfer(input: {
+  readonly movableAvailable: Milliunits;
+  readonly policyAmount: Milliunits;
+}): "source-available-at-or-below-leave-available" | "amount-policy-rounded-to-zero" {
+  return input.movableAvailable === 0
+    ? "source-available-at-or-below-leave-available"
+    : "amount-policy-rounded-to-zero";
 }
 
 function calculatePolicyAmount(policy: AmountPolicy, movableAvailable: Milliunits): Milliunits {

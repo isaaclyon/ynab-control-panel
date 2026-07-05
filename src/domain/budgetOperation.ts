@@ -6,6 +6,7 @@ export type CategoryBudgetUpdateRole = "primary" | "source" | "destination";
 
 export type CategoryBudgetUpdate = {
   readonly categoryId: string;
+  readonly categoryName?: string;
   readonly budgetedBefore: Milliunits;
   readonly budgetedAfter: Milliunits;
   readonly delta: Milliunits;

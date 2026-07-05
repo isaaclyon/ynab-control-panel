@@ -424,6 +424,7 @@ function isCategoryBudgetUpdate(input: unknown): boolean {
   const candidate = input as Record<string, unknown>;
   return (
     typeof candidate["categoryId"] === "string" &&
+    (candidate["categoryName"] === undefined || typeof candidate["categoryName"] === "string") &&
     typeof candidate["budgetedBefore"] === "number" &&
     typeof candidate["budgetedAfter"] === "number" &&
     typeof candidate["delta"] === "number"

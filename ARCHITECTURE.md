@@ -23,7 +23,12 @@ dry-run output or YNAB category budget updates
 - Responsibility: provide human- and scheduler-runnable commands.
 - Important boundary: dry-run is the default; mutation requires `--apply`.
 - Read-only `list` helpers may expose full local YNAB names and IDs for rules configuration, but never call mutating adapter operations.
+- Local `rules` inspection commands validate, list, and explain rules JSON without requiring a YNAB token or constructing a YNAB client.
 - `run rules` and `run scheduled` execute all enabled budget rules. `run top-up` remains a compatibility alias for the same rules runner.
+- Rule execution output is text-first: detailed per-operation lines are followed by a concise summary block for human review and cron/systemd logs.
+- Run output enriches category IDs with YNAB category names from read-only catalog data before formatting and before writing generic operation audit claims.
+- Run output includes a reason line for each operation or skipped disabled rule; these explanations are display text derived from domain reason codes and config state.
+- `check scheduled` verifies scheduled-run readiness with read-only YNAB calls and local filesystem checks; it must not call mutating adapter operations.
 - Read-only `audit` commands inspect local audit history without requiring a YNAB token or constructing a YNAB client.
 - What it must not own: budgeting math or YNAB response interpretation.
 
@@ -47,6 +52,7 @@ dry-run output or YNAB category budget updates
 - Important boundary: idempotency is enforced before mutating YNAB.
 - Apply mode claims an operation once, applies child category updates sequentially, then records the operation as applied.
 - Claim-only audit state surfaces as pending recovery and is not automatically retried.
+- Category names on planned operations are optional display metadata supplied by the command layer; budget/rule/month IDs remain the audit and mutation boundary.
 - What it must not own: low-level SDK calls or domain parsing.
 
 ### YNAB adapter

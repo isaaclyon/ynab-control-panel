@@ -8,7 +8,7 @@ import type {
   OperationAuditState,
   TopUpAuditLog,
 } from "../../src/audit/auditLog.js";
-import type { BudgetClient } from "../../src/ynab/budgetClient.js";
+import type { BudgetClient, YnabCatalogClient } from "../../src/ynab/budgetClient.js";
 
 class MemoryAuditLog implements TopUpAuditLog {
   public readonly records: BudgetOperationAuditRecord[] = [];
@@ -71,6 +71,9 @@ describe("run top-ups command", () => {
       budgeted: 75_000,
     });
     expect(write).toHaveBeenCalledWith(expect.stringContaining("applied: rule-1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("Summary:\n  rules considered: 1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("  applied operations: 1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("  total moved or budgeted: $50.00"));
   });
 
   it("defaults to the configured rules file and current budget month", async () => {
@@ -109,6 +112,82 @@ describe("run top-ups command", () => {
     });
     expect(budgetClient.updateCategoryBudgeted).not.toHaveBeenCalled();
     expect(write).toHaveBeenCalledWith(expect.stringContaining("dry-run: rule-1"));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("  planned operations: 1"));
+  });
+
+  it("enriches operation output with category names from the YNAB catalog", async () => {
+    const write = vi.fn();
+    const budgetClient: BudgetClient & YnabCatalogClient = {
+      getCategoryMonth: vi.fn().mockResolvedValue({
+        budgeted: milliunits(25_000),
+        activity: milliunits(0),
+        balance: milliunits(100_000),
+      }),
+      updateCategoryBudgeted: vi.fn(),
+      listBudgets: vi.fn(),
+      listCategories: vi.fn().mockResolvedValue([
+        {
+          id: "category-1",
+          name: "Groceries",
+          categoryGroupId: "group-1",
+          categoryGroupName: "Everyday",
+          hidden: false,
+        },
+      ]),
+    };
+
+    await runTopUpsCommand({
+      env: {
+        ynabAccessToken: "token",
+        rulesFile: "default-rules.json",
+        auditLogFile: "audit.jsonl",
+      },
+      options: { apply: false },
+      stdout: { write },
+      dependencies: {
+        loadRulesConfig: vi.fn().mockResolvedValue(configFixture()),
+        createBudgetClient: () => budgetClient,
+        createAuditLog: () => new MemoryAuditLog(),
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
+    });
+
+    expect(budgetClient.listCategories).toHaveBeenCalledWith({ budgetId: "budget-1" });
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("category-1 (Groceries) budgeted"));
+  });
+
+  it("continues with ID-only output when category-name lookup fails", async () => {
+    const write = vi.fn();
+    const budgetClient: BudgetClient & YnabCatalogClient = {
+      getCategoryMonth: vi.fn().mockResolvedValue({
+        budgeted: milliunits(25_000),
+        activity: milliunits(0),
+        balance: milliunits(100_000),
+      }),
+      updateCategoryBudgeted: vi.fn(),
+      listBudgets: vi.fn(),
+      listCategories: vi.fn().mockRejectedValue(new Error("YNAB catalog unavailable")),
+    };
+
+    await runTopUpsCommand({
+      env: {
+        ynabAccessToken: "token",
+        rulesFile: "default-rules.json",
+        auditLogFile: "audit.jsonl",
+      },
+      options: { apply: false },
+      stdout: { write },
+      dependencies: {
+        loadRulesConfig: vi.fn().mockResolvedValue(configFixture()),
+        createBudgetClient: () => budgetClient,
+        createAuditLog: () => new MemoryAuditLog(),
+        currentBudgetMonth: () => parseBudgetMonth("2026-08"),
+      },
+    });
+
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("category-1 budgeted"));
+    expect(write).toHaveBeenCalledWith(expect.not.stringContaining("category-1 ("));
+    expect(budgetClient.updateCategoryBudgeted).not.toHaveBeenCalled();
   });
 });
 

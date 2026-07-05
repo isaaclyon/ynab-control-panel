@@ -223,6 +223,8 @@ describe("monthly top-up job", () => {
       dryRun: false,
       budgetClient,
       auditLog,
+      categoryNameLookup: ({ categoryId }) =>
+        categoryId === "source" ? "Savings" : categoryId === "destination" ? "Groceries" : undefined,
       now: new Date("2026-07-01T00:00:00.000Z"),
     });
 
@@ -247,7 +249,43 @@ describe("monthly top-up job", () => {
     expect(auditLog.records[0]).toMatchObject({
       kind: "budget-operation-claimed",
       ruleId: "transfer-1",
-      operation: { updates: [{ categoryId: "source" }, { categoryId: "destination" }] },
+      operation: {
+        summary: "move $50.00 from source (Savings) to destination (Groceries)",
+        updates: [
+          { categoryId: "source", categoryName: "Savings" },
+          { categoryId: "destination", categoryName: "Groceries" },
+        ],
+      },
+    });
+  });
+
+  it("persists category names with claimed operations for later audit output", async () => {
+    const auditLog = new MemoryAuditLog();
+    const month = parseBudgetMonth("2026-07");
+    const budgetClient: BudgetClient = {
+      getCategoryMonth: vi.fn().mockResolvedValue({
+        budgeted: milliunits(25_000),
+        activity: milliunits(0),
+        balance: milliunits(100_000),
+      }),
+      updateCategoryBudgeted: vi.fn(),
+    };
+
+    await runMonthlyCategoryTopUps({
+      config: configFixture(),
+      month,
+      dryRun: false,
+      budgetClient,
+      auditLog,
+      categoryNameLookup: ({ categoryId }) => (categoryId === "category-1" ? "Groceries" : undefined),
+    });
+
+    expect(auditLog.records[0]).toMatchObject({
+      kind: "budget-operation-claimed",
+      operation: {
+        summary: "assign $50.00 to category-1 (Groceries) toward $200.00 target",
+        updates: [{ categoryId: "category-1", categoryName: "Groceries" }],
+      },
     });
   });
 
@@ -423,7 +461,19 @@ describe("monthly top-up job", () => {
       auditLog,
     });
 
-    expect(results).toEqual([]);
+    expect(results).toEqual([
+      {
+        status: "skipped-disabled",
+        ruleId: "rule-1",
+        ruleType: "monthly-category-top-up",
+        budgetId: "budget-1",
+        month: "2026-07",
+        reason: "rule-disabled",
+      },
+    ]);
+    expect(formatTopUpRunResults(results)).toContain("skipped-disabled: rule-1");
+    expect(formatTopUpRunResults(results)).toContain("reason: skipped because the rule is disabled in config");
+    expect(formatTopUpRunResults(results)).toContain("skipped disabled rules: 1");
     expect(budgetClient.getCategoryMonth).not.toHaveBeenCalled();
     expect(budgetClient.updateCategoryBudgeted).not.toHaveBeenCalled();
     expect(auditLog.records).toEqual([]);

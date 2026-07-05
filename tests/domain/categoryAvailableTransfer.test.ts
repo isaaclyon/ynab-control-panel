@@ -75,7 +75,19 @@ describe("category available transfer planning", () => {
       toSnapshot: { budgeted: milliunits(0), activity: milliunits(0), balance: milliunits(0) },
     });
 
-    expect(operation.reason).toBe("no-movable-available");
+    expect(operation.reason).toBe("source-available-at-or-below-leave-available");
+    expect(operation.updates.every((update) => update.delta === 0)).toBe(true);
+  });
+
+  it("explains when a percent policy rounds down to zero", () => {
+    const operation = planCategoryAvailableTransfer({
+      rule: { ...baseRule, amount: { type: "percent-of-available", percent: 1 }, leaveAvailable: milliunits(0) },
+      month: parseBudgetMonth("2026-07"),
+      fromSnapshot: { budgeted: milliunits(100_000), activity: milliunits(0), balance: milliunits(50) },
+      toSnapshot: { budgeted: milliunits(0), activity: milliunits(0), balance: milliunits(0) },
+    });
+
+    expect(operation.reason).toBe("amount-policy-rounded-to-zero");
     expect(operation.updates.every((update) => update.delta === 0)).toBe(true);
   });
 });

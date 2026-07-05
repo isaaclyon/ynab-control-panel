@@ -30,6 +30,16 @@
 
 **Apply mode**: A command mode enabled by `--apply` that mutates YNAB and records applied operations.
 
+**Scheduled-run health check**: A read-only command that verifies the configured scheduled run can parse its environment and rules, write beside the audit log path, connect to YNAB, and read enabled rule categories without mutating YNAB.
+
+**Rule execution summary**: A concise text block printed after detailed `run rules` / `run scheduled` operation output. It counts rules considered, dry-run planned operations, applied operations, already-applied skips, no-op operations, pending-recovery operations, disabled rules skipped before planning, and the total dollars planned/applied in the current run.
+
+**Category-name enrichment**: Run output loads category names from the YNAB category catalog and prints them alongside category IDs. Rules, audit keys, and domain math remain ID-based; audit output shows names only when they were captured in the claimed operation payload.
+
+**Run reason**: A human-readable explanation printed with each run result. It translates rule planning reason codes into why money will move or why a rule was no-op/skipped, such as target already met, source available at the leaveAvailable floor, amount policy rounded to zero, or disabled rule.
+
+**Rules inspection command**: A local-only command under `rules` that validates, lists, or explains rules JSON without requiring a YNAB token and without reading or mutating YNAB.
+
 **Audit log**: Append-only local records of claimed and applied budget operations. JSONL audit records let scheduled CLI runs avoid applying the same budget/rule/month twice and let read-only audit commands surface claim-only runs for manual recovery.
 
 ## Relationships
@@ -40,3 +50,8 @@
 - The category available transfer amount is capped by the source category's available balance after `leaveAvailable` and by its amount policy.
 - The audit log supports idempotency; it is not the source of truth for current YNAB balances.
 - Apply mode records an operation claim before mutating YNAB, then records the operation as applied after all child updates succeed. A claim without a matching applied record is a crash-recovery signal to inspect before retrying that budget/rule/month.
+- The scheduled-run health check is operational readiness evidence only; it does not reserve audit state or prove future YNAB balances will produce a non-no-op operation.
+- Rule execution summaries count transfers by positive child update deltas so moving money between categories is reported once, not once per source and destination update.
+- Category names are display metadata. Category IDs remain the durable identity for rules, audit idempotency, and YNAB mutations.
+- Disabled rules are reported as skipped run results without reading YNAB, writing audit records, or mutating YNAB.
+- Rules inspection commands stop at config parsing and formatting; they do not plan operations because planning depends on current YNAB category month snapshots.

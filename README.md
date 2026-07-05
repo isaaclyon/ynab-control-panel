@@ -6,12 +6,14 @@ Backend-first TypeScript utilities for safe YNAB automation. The CLI runs typed 
 
 - Load typed rules from JSON.
 - List YNAB budget and category IDs for rules setup.
+- Inspect local rules JSON without requiring a YNAB token.
 - Fetch category month state from YNAB.
 - Plan monthly category top-ups.
 - Plan category available transfers that move available money between categories by updating category `budgeted` amounts.
 - Preview one user-visible planned operation per rule, even when that operation contains multiple YNAB updates.
 - Apply changes only with `--apply`.
 - Write an operation audit log so scheduled jobs are idempotent per budget/rule/month and claim-only runs are visible for manual recovery.
+- Check scheduled-run readiness without mutating YNAB.
 
 ## Setup
 
@@ -39,6 +41,16 @@ npm run dev -- list categories --budget <budgetId>
 
 The `list` commands are read-only. They intentionally print full local YNAB names and IDs without redaction because their purpose is copy/paste configuration on your own machine.
 
+Inspect local rules JSON without contacting YNAB:
+
+```bash
+npm run dev -- rules validate
+npm run dev -- rules list
+npm run dev -- rules explain <ruleId>
+```
+
+Use `--rules <path>` on any `rules` inspection command to check a non-default rules file. These commands only parse local config; they do not require `YNAB_ACCESS_TOKEN` and do not read or mutate YNAB.
+
 Dry-run all enabled budget rules:
 
 ```bash
@@ -51,6 +63,8 @@ Apply all enabled budget rules:
 npm run dev -- run rules --month 2026-07 --apply
 ```
 
+`run rules`, `run top-up`, and `run scheduled` preserve detailed per-rule output and then print a summary block with rules considered, planned/applied operations, skipped/already-applied operations, no-ops, pending recovery, disabled rules, and the total dollars moved or budgeted in the current run. Each result includes a reason line explaining planned movement, no-ops, or disabled-rule skips. Category names are shown beside category IDs when the YNAB catalog lookup can resolve them; rules and audit identity remain ID-based.
+
 `run top-up` remains a compatibility alias for the generic rules runner:
 
 ```bash
@@ -61,6 +75,13 @@ Scheduled entrypoint, intended for cron/systemd/Docker on the mini PC:
 
 ```bash
 npm run dev -- run scheduled --apply
+```
+
+Check that the scheduled entrypoint is ready before enabling cron/systemd. This parses the environment and rules file, verifies the audit log path is writable, connects to YNAB, and reads the configured enabled rule categories for the target month without applying changes:
+
+```bash
+npm run dev -- check scheduled
+npm run dev -- check scheduled --month 2026-07 --rules config/rules.json
 ```
 
 Inspect pending recovery operations in the local audit log; this is read-only and does not require a YNAB token:
